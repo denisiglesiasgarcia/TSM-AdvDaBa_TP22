@@ -1,4 +1,5 @@
 version: '3'
+
 services:
   neo4j:
     image: neo4j:latest
@@ -7,10 +8,13 @@ services:
       - "7687:7687"
     environment:
       - NEO4J_AUTH=neo4j/testtest
-    mem_limit: "3g"
+    mem_limit: "2g"  # Memory limit for neo4j
+  
   app:
     build:
       context: .
       dockerfile: Dockerfile
     depends_on:
       - neo4j
+    mem_limit: "2g"
+

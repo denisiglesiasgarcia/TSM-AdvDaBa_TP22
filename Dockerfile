@@ -7,6 +7,9 @@ WORKDIR /app
 # Copy the current directory contents into the container at /app
 COPY . /app
 
+# Install netcat
+RUN apt-get update && apt-get install -y netcat-openbsd
+
 # Install any needed packages specified in requirements.txt
 RUN pip install --trusted-host pypi.python.org -r requirements.txt
 
@@ -15,5 +18,6 @@ ENV NEO4J_URI=bolt://neo4j:7687
 ENV NEO4J_USER=neo4j
 ENV NEO4J_PASSWORD=testtest
 
-# Run your script when the container launches
-CMD ["python", "TP22_neo4j_large_database.py"]
+# Import the data into Neo4j
+COPY entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
