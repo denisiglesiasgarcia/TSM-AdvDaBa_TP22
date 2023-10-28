@@ -1,9 +1,12 @@
 # TSM-AdvDaBa_TP22
 TSM-AdvDaBa - Large database experiment with Neo4j
 
+# Status
+- le docker marche pour l'instant, les json est balancé dans neo4j
+- Mettre le json dans la racine du dossier
 
 # TODO
-- régler le problème de docker qui ne marche pas
+- ajouter un message de début/fin de script qui s'affiche dans le terminal avec le temps total
 - faire le nécessaire pour que le gros json ne soit pas en local
 
 # How to use

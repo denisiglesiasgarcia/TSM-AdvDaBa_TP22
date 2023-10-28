@@ -19,5 +19,8 @@ ENV NEO4J_USER=neo4j
 ENV NEO4J_PASSWORD=testtest
 
 # Import the data into Neo4j
-COPY entrypoint.sh /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+# COPY entrypoint.sh /entrypoint.sh
+# ENTRYPOINT ["/entrypoint.sh"]
+
+# Launch the script
+CMD ["python", "/app/neo4j.py"]
