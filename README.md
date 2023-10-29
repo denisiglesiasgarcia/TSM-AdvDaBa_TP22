@@ -2,7 +2,7 @@
 TSM-AdvDaBa - Large database experiment with Neo4j
 
 # Status
-- le docker marche pour l'instant, le json est balancé dans neo4j
+- le docker marche, le json est balancé dans neo4j
 - Temps d'exécution actuel environ 12h
 - Mémoire utilisée par neo4j : 1Go
 - Mémoire utilisée par python : 50Mo
