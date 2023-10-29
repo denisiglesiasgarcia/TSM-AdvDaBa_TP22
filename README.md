@@ -8,8 +8,8 @@ TSM-AdvDaBa - Large database experiment with Neo4j
 - Mémoire utilisée par python : 50Mo
 
 # TODO
-~~- ajouter un message de début/fin de script qui s'affiche dans le terminal avec le temps total~~
-~~- faire le nécessaire pour que le gros json ne soit pas en local~~
+- ~~ajouter un message de début/fin de script qui s'affiche dans le terminal avec le temps total~~
+- ~~faire le nécessaire pour que le gros json ne soit pas en local~~
 - vérifier que le nom des articles est bien lié à son _id
 
 # How to use
