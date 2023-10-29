@@ -2,46 +2,110 @@ import ijson
 import re
 from neo4j import GraphDatabase
 import datetime
+from tqdm_loggable.auto import tqdm
+import logging
+from tqdm_loggable.tqdm_logging import tqdm_logging
+import os
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+tqdm_logging.set_level(logging.INFO)
+
+def drop_all_constraints_and_indexes(tx):
+    """ 
+    Debugging function to drop all indexes and constraints in the database 
+    """
+    # Get the list of all constraints
+    result = tx.run("SHOW CONSTRAINTS")
+    for record in result:
+        # Get the constraint name
+        constraint_name = record['name']
+        # Drop the constraint
+        tx.run(f"DROP CONSTRAINT {constraint_name} IF EXISTS")
+
+    # Now that constraints are dropped, get the list of all indexes
+    result = tx.run("SHOW INDEXES")
+    for record in result:
+        # Get the index name
+        index_name = record['name']
+        # Drop the index
+        tx.run(f"DROP INDEX {index_name} IF EXISTS")
+
+def neo4j_index_constraints(session):
+    with session.begin_transaction() as tx:
+        # index
+        tx.run("CREATE INDEX article_title_index FOR (n:Article) ON (n.title)")
+        tx.run("CREATE INDEX author_name_index FOR (a:Author) ON (a.name)")
+        # unique
+        tx.run("CREATE CONSTRAINT article_id_uniqueness FOR (a:Article) REQUIRE (a._id) IS UNIQUE")
+        tx.run("CREATE CONSTRAINT author_id_uniqueness FOR (a:Author) REQUIRE (a._id) IS UNIQUE")
+        # Commit the transaction at the end of the batch
+        tx.commit()
 
 def send_articles_to_neo4j(session, article_lists):
-    for article in article_lists:
-        article_id = article[0]
-        article_title = article[1]
-        
-        # Create the article node
-        session.run(
-            "MERGE (a:Article {_id: $id}) "
-            "ON CREATE SET a.title = $title "
-            "ON MATCH SET a.title = $title",
-            id=article_id,
-            title=article_title
-            )
+    with session.begin_transaction() as tx:
+        query = """
+                MERGE (a:Article {_id: $article_id})
+                ON CREATE SET a.title = $article_title
+                ON MATCH SET a.title = $article_title
+                """
+        for article in article_lists:
+            article_id = article[0]
+            article_title = article[1]
+            tx.run(
+                query,
+                article_id=article_id,
+                article_title=article_title
+                )
+        tx.commit()  # Commit the transaction at the end of the batch
 
 def send_authors_to_neo4j(session, author_lists):
-    for author in author_lists:
-        article_id = author[0]
-        article_title = author[1]
-        author_id = author[2]
-        author_name = author[3]
-        
-        if author_id and author_name:
-            session.run("""
-                MERGE (authorNode:Author {_id: $author_id, name: $name})
-                MERGE (a:Article {_id: $article_id, title: $title})
+    with session.begin_transaction() as tx:
+        query = """
+                MERGE (a:Article {_id: $article_id})
+                ON CREATE SET a.title = $article_title
+                ON MATCH SET a.title = $article_title
+                MERGE (authorNode:Author {_id: $author_id})
+                SET authorNode.name = $author_name
                 MERGE (authorNode)-[:AUTHORED]->(a)
-            """, author_id=author_id, name=author_name, title=article_title,article_id=article_id)
+                """
+        for author in author_lists:
+            article_id = author[0]
+            article_title = author[1]
+            author_id = author[2]
+            author_name = author[3]
+            
+            if author_id and author_name:
+                tx.run(
+                    query,
+                    author_id=author_id,
+                    author_name=author_name,
+                    article_title=article_title,
+                    article_id=article_id
+                    )
+        tx.commit()  # Commit the transaction at the end of the batch
 
 def send_references_to_neo4j(session, reference_lists):
-    for reference in reference_lists:
-        article_id = reference[0]
-        reference_article_id = reference[1]
-        
-        if reference_article_id:
-            session.run("""
+    with session.begin_transaction() as tx:
+        query = """
                 MERGE (a:Article {_id: $article_id})
                 MERGE (c:Article {_id: $reference_article_id})
                 MERGE (a)-[:CITES]->(c)
-            """, article_id=article_id, reference_article_id=reference_article_id)
+                """
+        for reference in reference_lists:
+            article_id = reference[0]
+            reference_article_id = reference[1]
+            
+            if reference_article_id:
+                tx.run(
+                    query,
+                    article_id=article_id,
+                    reference_article_id=reference_article_id)
+        tx.commit()  # Commit the transaction at the end of the batch    
 
 def articles_generator(filename):
     with open(filename, 'r') as file:
@@ -195,19 +259,27 @@ def main(filename, neo4j_uri, neo4j_user, neo4j_password):
     driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
     
     with driver.session() as session:
+        # debug drop all indexes
+        session.execute_write(drop_all_constraints_and_indexes)
+        # optimize neo4j
+        neo4j_index_constraints(session)
+        # process articles
         with open(filename, 'r', encoding='utf-8') as file:
             one_article = get_cleaned_data(filename)
-            for prefix, event, value in one_article:
+            # Wrap your loop with tqdm, and specify the total count of articles
+            t = tqdm(total=5354309, unit=' article')
+            for _, event, _ in one_article:
+                t.update()
                 if event == 'start_map':
                     one_article_dict = process_object(one_article)
-                    # add articles to neo4j
-                    article_lists = prepare_article_lists(one_article_dict)
-                    if article_lists:
-                        send_articles_to_neo4j(session, article_lists)
-                    # add authors to neo4j
+                    # add authors/articles to neo4j
                     author_lists = prepare_author_lists(one_article_dict)
                     if author_lists:
                         send_authors_to_neo4j(session, author_lists)
+                    else:
+                        article_lists = prepare_article_lists(one_article_dict)
+                        if article_lists:
+                            send_articles_to_neo4j(session, article_lists)
                     # add references to neo4j
                     references_lists = prepare_references_lists(one_article_dict)
                     if references_lists:
@@ -216,10 +288,10 @@ def main(filename, neo4j_uri, neo4j_user, neo4j_password):
     driver.close()
 
 # Usage
-filename = 'dblpv13.json'
-neo4j_uri = "bolt://neo4j:7687"
-neo4j_user = 'neo4j'
-neo4j_password = 'testtest'
+filename = os.environ['JSON_FILE']
+neo4j_uri = os.environ['NEO4J_URI']
+neo4j_user = os.environ['NEO4J_USER']
+neo4j_password = os.environ['NEO4J_PASSWORD']
 
 # start
 start_time = datetime.datetime.now()
