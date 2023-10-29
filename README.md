@@ -13,7 +13,7 @@ TSM-AdvDaBa - Large database experiment with Neo4j
 - vérifier que le nom des articles est bien lié à son _id
 
 # How to use
-- Modifier le docker-compose.yml pour changer le path du fichier json
+- Modifier le [docker-compose.yml](docker-compose.yml) pour changer le path du gros fichier json vers celui de votre choix
 - Build the docker image
     `docker build --no-cache -t neo4j_large .`
 - Run the docker image
