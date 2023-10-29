@@ -20,7 +20,7 @@ TSM-AdvDaBa - Large database experiment with Neo4j
     `docker compose up`
 
 ## Debug
-Stop the docker image
+Stop the docker image  
     `docker compose down`
 
 Remove all unused containers, networks, and images  
