@@ -24,6 +24,6 @@ Stop the docker image
     `docker compose down`
 
 Remove all unused containers, networks, and images
-
 ⚠️ WARNING! This will remove all images without at least one container associated to them.
-    `docker system prune -a`
+    `docker system prune -a`    This is the first line.  
+    This is the second line.
