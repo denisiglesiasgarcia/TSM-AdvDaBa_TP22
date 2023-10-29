@@ -148,6 +148,16 @@ def prepare_article_lists(article):
     ]
     return [article_data]
 
+def prepare_article_no_title_lists(article):
+    """
+    Create a new list with _id and title
+    """
+    article_no_title_data = [
+        article['_id'],
+        "Unknown title",
+    ]
+    return [article_no_title_data]
+
 def prepare_references_lists(article):
     """
     Prepare a list of lists of references
@@ -277,9 +287,16 @@ def main(filename, neo4j_uri, neo4j_user, neo4j_password):
                     if author_lists:
                         send_authors_to_neo4j(session, author_lists)
                     else:
-                        article_lists = prepare_article_lists(one_article_dict)
-                        if article_lists:
-                            send_articles_to_neo4j(session, article_lists)
+                        try:
+                            # articles avec titre
+                            article_lists = prepare_article_lists(one_article_dict)
+                            if article_lists:
+                                send_articles_to_neo4j(session, article_lists)
+                        except:
+                            # articles sans titre
+                            article_no_title_lists = prepare_article_no_title_lists(one_article_dict)
+                            if article_no_title_lists:
+                                send_articles_to_neo4j(session, article_no_title_lists)
                     # add references to neo4j
                     references_lists = prepare_references_lists(one_article_dict)
                     if references_lists:
