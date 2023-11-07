@@ -36,28 +36,42 @@ def preprocess_json(filename, buffer_size):
                 yield preprocess_line(line)
 
 class PreprocessedFile:
-    def __init__(self, filename, buffer_size=65536):  # buffer_size is in bytes
+    def __init__(self, filename, buffer_size=4096):  # buffer_size is in bytes
         self.generator = preprocess_json(filename, buffer_size)
         self.buffer = deque()
+        self.buffer_length = 0  # Track the length of strings in the buffer
+
+    def append_to_buffer(self, line):
+        self.buffer.append(line)
+        self.buffer_length += len(line)
+
+    def pop_from_buffer(self):
+        line = self.buffer.popleft()
+        self.buffer_length -= len(line)
+        return line
 
     def read(self, size=-1):
-        while size < 0 or sum(len(line) for line in self.buffer) < size:
+        while size < 0 or self.buffer_length < size:
             try:
-                self.buffer.append(next(self.generator))
+                self.append_to_buffer(next(self.generator))
             except StopIteration:
                 break  # End of generator, return what's left in the buffer
         if size < 0:
             result = ''.join(self.buffer)
             self.buffer.clear()
+            self.buffer_length = 0
         else:
             result_list = []
             remaining_size = size
             while self.buffer and remaining_size > 0:
-                line = self.buffer.popleft()
+                line = self.pop_from_buffer()
                 result_list.append(line[:remaining_size])
                 remaining_size -= len(line)
                 if remaining_size < 0:
-                    self.buffer.appendleft(line[remaining_size:])
+                    # If the last line was too large, put the remaining part back into the buffer
+                    leftover = line[remaining_size:]
+                    self.buffer.appendleft(leftover)
+                    self.buffer_length += len(leftover)
             result = ''.join(result_list)
         return result
 
@@ -172,7 +186,7 @@ def neo4j_startup(uri, username, password):
     # Start a session and process the data in batches
     with driver.session() as session:
         # debug drop all indexes
-        session.run("MATCH (n) DETACH DELETE n")
+        #session.run("MATCH (n) DETACH DELETE n")
         session.execute_write(drop_all_constraints_and_indexes)
         # optimize Neo4j
         neo4j_index_constraints(session)
@@ -238,7 +252,7 @@ def main(neo4j_uri, neo4j_user, neo4j_password, filename, BATCH_SIZE, TOTAL_ARTI
     # Loop through all the batches from the generator with a progress bar
     for articles_authors_batch, articles_references_batch in article_batches_generator:
         # Update the tqdm progress bar with the number of articles processed in this batch
-        t.update(len(articles_authors_batch))  # Assuming each batch represents multiple articles
+        t.update(len(articles_authors_batch)+len(articles_references_batch))  # Assuming each batch represents multiple articles
         
         # Process the current batch of articles
         send_data_to_neo4j(neo4j_uri, neo4j_user, neo4j_password, articles_authors_batch, articles_references_batch)
@@ -252,7 +266,7 @@ neo4j_uri = os.environ['NEO4J_URI']
 neo4j_user = os.environ['NEO4J_USER']
 neo4j_password = os.environ['NEO4J_PASSWORD']
 BATCH_SIZE = 10000
-TOTAL_ARTICLES = 5354309
+TOTAL_ARTICLES = 17_100_000
 
 # start
 start_time = datetime.datetime.now()

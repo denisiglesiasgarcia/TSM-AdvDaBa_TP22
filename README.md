@@ -3,9 +3,9 @@ TSM-AdvDaBa - Large database experiment with Neo4j
 
 ## Status
 - le docker marche, le json est balancé dans neo4j
-- Temps d'exécution actuel environ 3h
-- Mémoire utilisée par neo4j : 2GB/3GB
-- Mémoire utilisée par python : 275MB/1GB
+- Temps d'exécution actuel 4:25:23
+- Mémoire utilisée par neo4j : 2.7GB/3GB
+- Mémoire utilisée par python : 400MB/1GB
 
 ## TODO
 - ~~ajouter un message de début/fin de script qui s'affiche dans le terminal avec le temps total~~
@@ -13,8 +13,8 @@ TSM-AdvDaBa - Large database experiment with Neo4j
 - ~~vérifier que le nom des articles est bien lié à son _id~~
 
 ## Commentaires
-- Seulement les articles qui ont un author_id, article_title et author (dict avec _id et name) sont ajoutés à neo4j
-- Seulement les articles qui ont un author_id, article_title et references (liste d'articles) sont ajoutés à neo4j
+- Seulement les articles qui ont un article_id, article_title et author (dict avec _id et name) sont ajoutés à neo4j
+- Seulement les articles qui ont un article_id, article_title et references (liste d'articles) sont ajoutés à neo4j
 
 ## How to use
 - Modifier le [docker-compose.yml](docker-compose.yml) pour changer le path du gros fichier json vers celui de votre choix
