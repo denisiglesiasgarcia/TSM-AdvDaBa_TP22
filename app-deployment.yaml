@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yaml
+    kompose.version: 1.28.0 (HEAD)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: app
+  name: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: app
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yaml
+        kompose.version: 1.28.0 (HEAD)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/tsm-advdaba-tp22-default: "true"
+        io.kompose.service: app
+    spec:
+      containers:
+        - env:
+            - name: JSON_FILE
+              value: /data/dblpv13.json
+            - name: NEO4J_PASSWORD
+              value: testtest
+            - name: NEO4J_URI
+              value: bolt://neo4j:7687
+            - name: NEO4J_USER
+              value: neo4j
+          image: app
+          name: app
+          resources:
+            limits:
+              memory: "1073741824"
+          volumeMounts:
+            - mountPath: /data
+              name: app-claim0
+      restartPolicy: Always
+      volumes:
+        - name: app-claim0
+          persistentVolumeClaim:
+            claimName: app-claim0
+status: {}

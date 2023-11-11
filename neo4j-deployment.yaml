@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yaml
+    kompose.version: 1.28.0 (HEAD)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: neo4j
+  name: neo4j
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: neo4j
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yaml
+        kompose.version: 1.28.0 (HEAD)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/tsm-advdaba-tp22-default: "true"
+        io.kompose.service: neo4j
+    spec:
+      containers:
+        - env:
+            - name: NEO4J_AUTH
+              value: neo4j/testtest
+            - name: NEO4J_dbms_memory_heap_initial__size
+              value: 768M
+            - name: NEO4J_dbms_memory_heap_max__size
+              value: 768M
+            - name: NEO4J_dbms_memory_pagecache_size
+              value: 512M
+            - name: NEO4J_dbms_memory_transaction_total_max
+              value: 512M
+          image: neo4j:latest
+          name: neo4j
+          ports:
+            - containerPort: 7474
+            - containerPort: 7687
+          resources:
+            limits:
+              memory: "3221225472"
+      restartPolicy: Always
+status: {}
