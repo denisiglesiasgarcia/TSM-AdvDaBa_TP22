@@ -30,3 +30,18 @@ Stop the docker image
 Remove all unused containers, networks, and images  
     ⚠️ WARNING! This will remove all images without at least one container associated to them.  
     `docker system prune -a`
+
+## Kubernetes
+### Setup
+- Activer kubernetes dans Docker Desktop → Settings → Kubernetes → Enable Kubernetes
+- Se logger sur le cluster et télécharger le fichier KubeConfig (en haut à droite de la page du cluster)
+- Créer la variable d'environnement KUBECONFIG avec le path vers le fichier KubeConfig
+    - Pour PowerShell: `$env:KUBECONFIG="C:\path\to\local.yaml`
+    - Pour CMD: `set KUBECONFIG=C:\path\to\local.yaml`
+    - Pour Linux: `export KUBECONFIG=/path/to/local.yaml`
+- Créer un namespace
+    - local (en dessous de la maison à gauche) → Projects/Namespaces → Create Namespace
+- Test config kubectl `describe ns adv-da-ba23-iglwae`
+- push l'image sur docker hub
+    - `docker build -t comfy2665/neo4j_large .`
+    - `docker push comfy2665/neo4j_large`
