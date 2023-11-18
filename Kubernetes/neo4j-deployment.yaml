@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neo4jlarge-deployment
+  namespace: adv-da-ba23-iglwae
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neo4jlarge
+  template:
+    metadata:
+      labels:
+        app: neo4jlarge
+    spec:
+      containers:
+        - name: neo4j
+          image: neo4j:latest
+          env:
+            - name: NEO4J_AUTH
+              value: "neo4j/testtest"
+            - name: NEO4J_dbms_memory_heap_initial__size
+              value: "768M"
+            - name: NEO4J_dbms_memory_heap_max__size
+              value: "768M"
+            - name: NEO4J_dbms_memory_pagecache_size
+              value: "512M"
+            - name: NEO4J_dbms_memory_transaction_total_max
+              value: "512M"
+          ports:
+            - containerPort: 7687
+          resources:
+            limits:
+              memory: "3Gi"

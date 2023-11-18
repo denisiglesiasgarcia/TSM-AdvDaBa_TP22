@@ -2,12 +2,13 @@
 
 echo "Starting entrypoint.sh..."
 
-# Wait for neo4j to start
-NEO4J_HOST="neo4j"
-NEO4J_PORT="7687"
+# Use environment variables for Neo4j host and port, with defaults
+NEO4J_HOST="${NEO4J_HOST:-neo4j}"
+NEO4J_PORT="${NEO4J_PORT:-7687}"
 
 echo "Waiting for Neo4j service at $NEO4J_HOST:$NEO4J_PORT to start..."
 
+# Wait for Neo4j to start
 until $(nc -zv $NEO4J_HOST $NEO4J_PORT); do
     echo "Neo4j not yet available, retrying..."
     sleep 5
@@ -15,14 +16,14 @@ done
 
 echo "Neo4j service is available, proceeding with data import check..."
 
-# Check if the marker file exists → if not it means that the data has not been imported yet
+# Check if the marker file exists
 if [ ! -f /tmp/data_imported ]; then
     echo "Marker file not found, starting data import..."
     
-    # Run your Python script and log the output to a file
+    # Run your Python script
     python main.py
 
-    # If the Python script ran successfully, create the marker file
+    # Check if the script ran successfully
     if [ $? -eq 0 ]; then
         echo "Python script ran successfully, creating marker file..."
         touch /tmp/data_imported
