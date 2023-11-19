@@ -7,6 +7,7 @@ from tqdm_loggable.tqdm_logging import tqdm_logging
 import os
 from collections import deque
 from itertools import islice
+import gc
 
 # Configure logging
 logging.basicConfig(
@@ -256,6 +257,7 @@ def main(neo4j_uri, neo4j_user, neo4j_password, filename, BATCH_SIZE, TOTAL_ARTI
         
         # Process the current batch of articles
         send_data_to_neo4j(neo4j_uri, neo4j_user, neo4j_password, articles_authors_batch, articles_references_batch)
+        gc.collect()
 
     # Optional: Close the tqdm progress bar once processing is complete
     t.close()
@@ -265,7 +267,7 @@ filename = os.environ['JSON_FILE']
 neo4j_uri = os.environ['NEO4J_URI']
 neo4j_user = os.environ['NEO4J_USER']
 neo4j_password = os.environ['NEO4J_PASSWORD']
-BATCH_SIZE = 10000
+BATCH_SIZE = int(os.environ['BATCH_SIZE_ARTICLES'])
 TOTAL_ARTICLES = 17_100_000
 
 # start

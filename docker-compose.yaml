@@ -11,5 +11,6 @@ services:
       - NEO4J_PASSWORD=testtest
       - NEO4J_URI=bolt://neo4j-service:7687
       - JSON_FILE=/data/dblpv13.json # Update as needed
+      - BATCH_SIZE_ARTICLES=10000
     volumes:
       - C:\\Users\\denis.iglesias\\OneDrive - HESSO\\03 Master\\01 Cours\\12 TSM-AdvDaBa\\02 Labo\\03 Labo 2.2 neo4j large database:/data # à modifier si besoin
