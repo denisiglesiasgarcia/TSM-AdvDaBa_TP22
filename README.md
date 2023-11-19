@@ -21,6 +21,8 @@ TSM-AdvDaBa - Large database experiment with Neo4j
 Push l'image sur docker hub
 ```
 docker build --no-cache -t comfy2665/neo4j_large .
+```
+```
 docker push comfy2665/neo4j_large
 ```
 Stop the docker image  
@@ -41,12 +43,24 @@ docker system prune -a
 - Activer kubernetes dans Docker Desktop → Settings → Kubernetes → Enable Kubernetes
 - Se logger sur le cluster et télécharger le fichier KubeConfig (en haut à droite de la page du cluster)
 - Créer la variable d'environnement KUBECONFIG avec le path vers le fichier KubeConfig
-    - Pour PowerShell: `$env:KUBECONFIG="C:\path\to\local.yaml`
-    - Pour CMD: `set KUBECONFIG=C:\path\to\local.yaml`
-    - Pour Linux: `export KUBECONFIG=/path/to/local.yaml`
+    - Pour PowerShell:
+        ```
+        $env:KUBECONFIG="C:\path\to\local.yaml
+        ```
+    - Pour CMD:
+        ```
+        set KUBECONFIG=C:\path\to\local.yaml
+        ```
+    - Pour Linux:
+        ```
+        export KUBECONFIG=/path/to/local.yaml
+        ```
 - Créer un namespace
     - local (en dessous de la maison à gauche) → Projects/Namespaces → Create Namespace
-- Test config `kubectl describe ns adv-da-ba23-iglwae`
+- Test config
+    ```
+    kubectl describe ns adv-da-ba23-iglwae
+    ```
 ### JSON
 - Créer un persistent volume claim (pvc) → Storage → Persistent Volume Claims → Create Persistent Volume Claim
     - Fichier YAML dans le dossier kubernetes `json-data.yaml`
