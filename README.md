@@ -91,5 +91,5 @@ kubectl top pod -n adv-da-ba23-iglwae
 ```
 
 ## Ressources
-https://neo4j.com/docs/operations-manual/current/docker/ref-settings/
+https://neo4j.com/docs/operations-manual/current/docker/ref-settings/   
 https://stackoverflow.com/questions/76207890/neo4j-docker-compose-to-kubernetes
