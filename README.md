@@ -18,14 +18,20 @@ TSM-AdvDaBa - Large database experiment with Neo4j
 - Seulement les articles qui ont un article_id, article_title et references (liste d'articles) sont ajoutés à neo4j
 
 ## Docker (debug)
-- push l'image sur docker hub
-    - `docker build --no-cache -t comfy2665/neo4j_large .`
-    - `docker push comfy2665/neo4j_large`
-- Stop the docker image  
-    `docker compose down`
-- Remove all unused containers, networks, and images  
+Push l'image sur docker hub
+```
+docker build --no-cache -t comfy2665/neo4j_large .
+docker push comfy2665/neo4j_large
+```
+Stop the docker image  
+```
+docker compose down
+```
+Remove all unused containers, networks, and images  
     ⚠️ WARNING! This will remove all images without at least one container associated to them.  
-    `docker system prune -a`
+```
+docker system prune -a
+```
 
 ## Kubernetes
 ### Check list
