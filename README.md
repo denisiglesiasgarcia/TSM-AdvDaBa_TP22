@@ -19,7 +19,7 @@ TSM-AdvDaBa - Large database experiment with Neo4j
 
 ## Docker (debug)
 - push l'image sur docker hub
-    - `docker build -t comfy2665/neo4j_large .`
+    - `docker build --no-cache -t comfy2665/neo4j_large .`
     - `docker push comfy2665/neo4j_large`
 - Stop the docker image  
     `docker compose down`
