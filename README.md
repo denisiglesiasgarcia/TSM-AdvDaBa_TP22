@@ -86,7 +86,9 @@ Services → Service Discovery → Services → Create Service
     - Créer un deployment pour python
         - Fichier YAML dans le dossier kubernetes `python-app-deployment.yaml`
 ### Monitoring
-`kubectl top pod -n adv-da-ba23-iglwae`
+```
+kubectl top pod -n adv-da-ba23-iglwae
+```
 
 ## Ressources
 https://neo4j.com/docs/operations-manual/current/docker/ref-settings/
