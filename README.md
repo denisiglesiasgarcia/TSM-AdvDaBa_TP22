@@ -2,15 +2,15 @@
 TSM-AdvDaBa - Large database experiment with Neo4j
 
 ## Status
-- Le docker de l'app python est publié sur docker hub
-- Déploiement sur kubernetes fonctionnel
-- Le script python semble fonctionnel sur Kubernetes
+- Temps d'éxécution 38 minutes / 2GB RAM / 2-3 CPU / Batch_size_articles = 1000 / neo4j_batch_size = 100
+![Alt text](image.png)
 
 ## TODO
 - ~~ajouter un message de début/fin de script qui s'affiche dans le terminal avec le temps total~~
 - ~~faire le nécessaire pour que le gros json ne soit pas en local~~
 - ~~vérifier que le nom des articles est bien lié à son _id~~
 - ~~enlever neo4j du container pour kubernetes~~
+- ~~Déploiement sur kubernetes fonctionnel~~
 - Tester temps d'exécution script sur kubernetes
 
 ## Commentaires

@@ -37,7 +37,7 @@ def preprocess_json(filename, buffer_size):
                 yield preprocess_line(line)
 
 class PreprocessedFile:
-    def __init__(self, filename, buffer_size=4096):  # buffer_size is in bytes
+    def __init__(self, filename, buffer_size=2048):  # buffer_size is in bytes
         self.generator = preprocess_json(filename, buffer_size)
         self.buffer = deque()
         self.buffer_length = 0  # Track the length of strings in the buffer
@@ -199,27 +199,29 @@ def send_data_to_neo4j(uri, username, password, author_lists, references_lists):
     # Function to send a single batch to the database
     def send_batch_author(tx, authors_batch):
         query = """
-        UNWIND $authors_batch AS row
-        MERGE (a:Article {_id: row.article.article_id})
-            ON CREATE SET a.title = row.article.article_title
-        WITH a, row
+        CALL apoc.periodic.iterate(
+        'UNWIND $authors_batch AS row RETURN row',
+        'MERGE (a:Article {_id: row.article.article_id})
+        ON CREATE SET a.title = row.article.article_title
         UNWIND row.authors AS authorData
         MERGE (author:Author {_id: authorData._id})
-            ON CREATE SET author.name = authorData.name
-        MERGE (author)-[:AUTHORED]->(a)
+        ON CREATE SET author.name = authorData.name
+        MERGE (author)-[:AUTHORED]->(a)',
+        {batchSize:100, parallel:true, params:{authors_batch: $authors_batch}})
         """
 
         tx.run(query, authors_batch=authors_batch)
 
     def send_batch_ref(tx, references_batch):
         query = """
-        UNWIND $references_batch AS refRow
-        MERGE (refArticle:Article {_id: refRow.article_id})
-            ON CREATE SET refArticle.title = refRow.article_title
-        WITH refArticle, refRow
+        CALL apoc.periodic.iterate(
+        'UNWIND $references_batch AS refRow RETURN refRow',
+        'MERGE (refArticle:Article {_id: refRow.article_id})
+        ON CREATE SET refArticle.title = refRow.article_title
         UNWIND refRow.references AS reference
         MERGE (referredArticle:Article {_id: reference})
-        MERGE (refArticle)-[:CITES]->(referredArticle)
+        MERGE (refArticle)-[:CITES]->(referredArticle)',
+        {batchSize:100, parallel:true, params:{references_batch: $references_batch}})
         """
 
         tx.run(query, references_batch=references_batch)

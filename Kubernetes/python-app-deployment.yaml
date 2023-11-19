@@ -31,7 +31,7 @@ spec:
             - name: JSON_FILE
               value: "/data/dblpv13.json"
             - name: BATCH_SIZE_ARTICLES
-              value: "100"
+              value: "1000"
           resources:
             limits:
               memory: "0.2Gi"
