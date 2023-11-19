@@ -69,16 +69,16 @@ docker system prune -a
     ```
     kubectl apply -f temp-pod.yaml
     ```
-Copier le fichier JSON
+- Copier le fichier JSON
     ```
     cd "C:\Users\denis.iglesias\OneDrive - HESSO\03 Master\01 Cours\12 TSM-AdvDaBa\02 Labo\03 Labo 2.2 neo4j large database"
     kubectl cp dblpv13.json adv-da-ba23-iglwae/temp-pod:/mnt/dblpv13.json
     ```
-Vérifier le fichier
+- Vérifier le fichier
     ```
     kubectl exec -it -n adv-da-ba23-iglwae temp-pod -- ls -lh /mnt/dblpv13.json
     ```
-Effacer le pod temporaire
+- Effacer le pod temporaire
     ```
     kubectl delete pod -n adv-da-ba23-iglwae temp-pod
     ```
