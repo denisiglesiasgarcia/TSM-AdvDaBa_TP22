@@ -273,30 +273,30 @@ def send_data_to_neo4j(uri, username, password, author_lists, references_lists):
     def send_batch_author(tx, authors_batch):
         query = """
         CALL apoc.periodic.iterate(
-        'UNWIND $authors_batch AS row RETURN row',
-        'MERGE (a:Article {_id: row.article.article_id})
-        ON CREATE SET a.title = row.article.article_title
-        UNWIND row.authors AS authorData
-        MERGE (author:Author {_id: authorData._id})
-        ON CREATE SET author.name = authorData.name
-        MERGE (author)-[:AUTHORED]->(a)',
-        {batchSize:100, parallel:true, params:{authors_batch: $authors_batch}})
+            'UNWIND $authors_batch AS row RETURN row',
+            'MERGE (a:Article {_id: row.article.article_id})
+            ON CREATE SET a.title = row.article.article_title
+            WITH a, row.authors AS authors
+            UNWIND authors AS authorData
+            MERGE (author:Author {_id: authorData._id})
+            ON CREATE SET author.name = authorData.name
+            MERGE (author)-[:AUTHORED]->(a)',
+            {batchSize:100, parallel:false, params:{authors_batch: $authors_batch}})
         """
-
         tx.run(query, authors_batch=authors_batch)
 
     def send_batch_ref(tx, references_batch):
         query = """
         CALL apoc.periodic.iterate(
-        'UNWIND $references_batch AS refRow RETURN refRow',
-        'MERGE (refArticle:Article {_id: refRow.article_id})
-        ON CREATE SET refArticle.title = refRow.article_title
-        UNWIND refRow.references AS reference
-        MERGE (referredArticle:Article {_id: reference})
-        MERGE (refArticle)-[:CITES]->(referredArticle)',
-        {batchSize:100, parallel:true, params:{references_batch: $references_batch}})
+            'UNWIND $references_batch AS refRow RETURN refRow',
+            'MERGE (refArticle:Article {_id: refRow.article_id})
+            ON CREATE SET refArticle.title = refRow.article_title
+            WITH refArticle, refRow.references AS references
+            UNWIND references AS reference
+            MERGE (referredArticle:Article {_id: reference})
+            MERGE (refArticle)-[:CITES]->(referredArticle)',
+            {batchSize:100, parallel:false, params:{references_batch: $references_batch}})
         """
-
         tx.run(query, references_batch=references_batch)
 
     # Connect to Neo4j
