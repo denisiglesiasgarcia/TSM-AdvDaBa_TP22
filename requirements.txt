@@ -1,3 +1,4 @@
 neo4j==5.14.0
 ijson==3.2.3
 tqdm-loggable
+requests
