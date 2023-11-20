@@ -29,7 +29,7 @@ spec:
             - name: NEO4J_URI
               value: "bolt://neo4jlarge-service:7687"
             - name: JSON_FILE
-              value: "/data/dblpv13.json"
+              value: "http://vmrum.isc.heia-fr.ch/dblpv13.json"
             - name: BATCH_SIZE_ARTICLES
               value: "1000"
           resources:
@@ -37,10 +37,4 @@ spec:
               memory: "0.2Gi"
             requests:
               memory: "0.2Gi"
-          volumeMounts:
-            - name: json-data
-              mountPath: /data
-      volumes:
-        - name: json-data
-          persistentVolumeClaim:
-            claimName: json-data-pvc
+

@@ -8,6 +8,7 @@ import os
 from collections import deque
 from itertools import islice
 import gc
+import requests
 
 # Configure logging
 logging.basicConfig(
@@ -20,38 +21,90 @@ tqdm_logging.set_level(logging.INFO)
 
 # JSON
 def preprocess_line(line):
+    """
+    Preprocesses a line by replacing 'NaN' with 'null' and removing 'NumberInt(' and ')'.
+
+    Args:
+        line (str): The line to be preprocessed.
+
+    Returns:
+        str: The preprocessed line.
+    """
     return line.replace('NaN', 'null').replace('NumberInt(', '').replace(')', '')
 
-def preprocess_json(filename, buffer_size):
-    with open(filename, 'r', encoding='utf-8') as file:
-        buffer = ''
-        while True:
-            chunk = file.read(buffer_size)
-            if not chunk:
-                if buffer:
-                    yield preprocess_line(buffer)
-                break  # End of file
-            buffer += chunk
-            while '\n' in buffer:
-                line, buffer = buffer.split('\n', 1)
-                yield preprocess_line(line)
+def preprocess_json(url, buffer_size):
+    """
+    Preprocesses a JSON file from a given URL.
+
+    Args:
+        url (str): The URL of the JSON file.
+        buffer_size (int): The size of the buffer for reading the file.
+
+    Yields:
+        str: Preprocessed line from the JSON file.
+
+    Raises:
+        requests.HTTPError: If there is an error while retrieving the file.
+
+    """
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        buffer = bytearray()
+        for chunk in r.iter_content(chunk_size=buffer_size):
+            buffer.extend(chunk)
+            last_newline_pos = buffer.rfind(b'\n')
+            if last_newline_pos != -1:
+                lines = buffer[:last_newline_pos].decode('utf-8').split('\n')
+                buffer = buffer[last_newline_pos + 1:]
+                for line in lines:
+                    yield preprocess_line(line)
+        if buffer:
+            yield preprocess_line(buffer.decode('utf-8'))
 
 class PreprocessedFile:
-    def __init__(self, filename, buffer_size=2048):  # buffer_size is in bytes
-        self.generator = preprocess_json(filename, buffer_size)
+    def __init__(self, url, buffer_size=4096):  # buffer_size is in bytes
+        """
+        Initializes a PreprocessedFile object.
+
+        Args:
+            url (str): The name of the file to preprocess.
+            buffer_size (int, optional): The size of the buffer in bytes. Defaults to 4096.
+        """
+        self.generator = preprocess_json(url, buffer_size)
         self.buffer = deque()
         self.buffer_length = 0  # Track the length of strings in the buffer
 
     def append_to_buffer(self, line):
+        """
+        Appends a line to the buffer.
+
+        Args:
+            line (str): The line to append to the buffer.
+        """
         self.buffer.append(line)
         self.buffer_length += len(line)
 
     def pop_from_buffer(self):
+        """
+        Pops a line from the buffer.
+
+        Returns:
+            str: The popped line from the buffer.
+        """
         line = self.buffer.popleft()
         self.buffer_length -= len(line)
         return line
 
     def read(self, size=-1):
+        """
+        Reads and returns the specified number of characters from the file.
+
+        Args:
+            size (int, optional): The number of characters to read. Defaults to -1, which means read all.
+
+        Returns:
+            str: The read characters from the file.
+        """
         while size < 0 or self.buffer_length < size:
             try:
                 self.append_to_buffer(next(self.generator))
@@ -76,8 +129,17 @@ class PreprocessedFile:
             result = ''.join(result_list)
         return result
 
-def get_cleaned_data(filename):
-    preprocessed_file = PreprocessedFile(filename)
+def get_cleaned_data(url):
+    """
+    Retrieves cleaned data from a preprocessed file.
+
+    Args:
+        url (str): The path to the preprocessed file.
+
+    Returns:
+        iterator: An iterator over the cleaned data items.
+    """
+    preprocessed_file = PreprocessedFile(url)
     return ijson.items(preprocessed_file, 'item')
 
 def parse_ijson_object(cleaned_data, batch_size):
@@ -150,6 +212,17 @@ def parse_ijson_object(cleaned_data, batch_size):
 
 # Neo4j
 def neo4j_startup(uri, username, password):
+    """
+    Connects to a Neo4j database using the provided URI, username, and password.
+    Drops all constraints and indexes in the database for debugging purposes.
+    Creates new indexes and constraints for optimized Neo4j performance.
+    Closes the database connection at the end.
+    
+    Parameters:
+    - uri (str): The URI of the Neo4j database.
+    - username (str): The username for authentication.
+    - password (str): The password for authentication.
+    """
     def drop_all_constraints_and_indexes(tx):
         """ 
         Debugging function to drop all indexes and constraints in the database 
@@ -200,30 +273,30 @@ def send_data_to_neo4j(uri, username, password, author_lists, references_lists):
     def send_batch_author(tx, authors_batch):
         query = """
         CALL apoc.periodic.iterate(
-        'UNWIND $authors_batch AS row RETURN row',
-        'MERGE (a:Article {_id: row.article.article_id})
-        ON CREATE SET a.title = row.article.article_title
-        UNWIND row.authors AS authorData
-        MERGE (author:Author {_id: authorData._id})
-        ON CREATE SET author.name = authorData.name
-        MERGE (author)-[:AUTHORED]->(a)',
-        {batchSize:100, parallel:true, params:{authors_batch: $authors_batch}})
+            'UNWIND $authors_batch AS row RETURN row',
+            'MERGE (a:Article {_id: row.article.article_id})
+            ON CREATE SET a.title = row.article.article_title
+            WITH a, row.authors AS authors
+            UNWIND authors AS authorData
+            MERGE (author:Author {_id: authorData._id})
+            ON CREATE SET author.name = authorData.name
+            MERGE (author)-[:AUTHORED]->(a)',
+            {batchSize:100, parallel:false, params:{authors_batch: $authors_batch}})
         """
-
         tx.run(query, authors_batch=authors_batch)
 
     def send_batch_ref(tx, references_batch):
         query = """
         CALL apoc.periodic.iterate(
-        'UNWIND $references_batch AS refRow RETURN refRow',
-        'MERGE (refArticle:Article {_id: refRow.article_id})
-        ON CREATE SET refArticle.title = refRow.article_title
-        UNWIND refRow.references AS reference
-        MERGE (referredArticle:Article {_id: reference})
-        MERGE (refArticle)-[:CITES]->(referredArticle)',
-        {batchSize:100, parallel:true, params:{references_batch: $references_batch}})
+            'UNWIND $references_batch AS refRow RETURN refRow',
+            'MERGE (refArticle:Article {_id: refRow.article_id})
+            ON CREATE SET refArticle.title = refRow.article_title
+            WITH refArticle, refRow.references AS references
+            UNWIND references AS reference
+            MERGE (referredArticle:Article {_id: reference})
+            MERGE (refArticle)-[:CITES]->(referredArticle)',
+            {batchSize:100, parallel:false, params:{references_batch: $references_batch}})
         """
-
         tx.run(query, references_batch=references_batch)
 
     # Connect to Neo4j
@@ -239,12 +312,12 @@ def send_data_to_neo4j(uri, username, password, author_lists, references_lists):
     # Close the driver
     driver.close()
 
-def main(neo4j_uri, neo4j_user, neo4j_password, filename, BATCH_SIZE, TOTAL_ARTICLES):
+def main(neo4j_uri, neo4j_user, neo4j_password, url, BATCH_SIZE, TOTAL_ARTICLES):
     # Neo4j cleanup and optimization
     neo4j_startup(neo4j_uri, neo4j_user, neo4j_password)
 
     # Parse JSON file and get a generator of cleaned data
-    cleaned_data_generator = get_cleaned_data(filename)
+    cleaned_data_generator = get_cleaned_data(url)
     
     # Create the generator
     article_batches_generator = parse_ijson_object(cleaned_data_generator, BATCH_SIZE)
@@ -255,7 +328,7 @@ def main(neo4j_uri, neo4j_user, neo4j_password, filename, BATCH_SIZE, TOTAL_ARTI
     # Loop through all the batches from the generator with a progress bar
     for articles_authors_batch, articles_references_batch in article_batches_generator:
         # Update the tqdm progress bar with the number of articles processed in this batch
-        t.update(len(articles_authors_batch)+len(articles_references_batch))  # Assuming each batch represents multiple articles
+        t.update(len(articles_authors_batch)+len(articles_references_batch))
         
         # Process the current batch of articles
         send_data_to_neo4j(neo4j_uri, neo4j_user, neo4j_password, articles_authors_batch, articles_references_batch)
@@ -265,7 +338,7 @@ def main(neo4j_uri, neo4j_user, neo4j_password, filename, BATCH_SIZE, TOTAL_ARTI
     t.close()
 
 # Usage
-filename = os.environ['JSON_FILE']
+url = os.environ['JSON_FILE']
 neo4j_uri = os.environ['NEO4J_URI']
 neo4j_user = os.environ['NEO4J_USER']
 neo4j_password = os.environ['NEO4J_PASSWORD']
@@ -277,9 +350,9 @@ start_time = datetime.datetime.now()
 print(f"Processing started at {start_time}")
 
 # process articles
-main(neo4j_uri, neo4j_user, neo4j_password, filename, BATCH_SIZE, TOTAL_ARTICLES)
+main(neo4j_uri, neo4j_user, neo4j_password, url, BATCH_SIZE, TOTAL_ARTICLES)
 
 # end
-end_time = datetime.datetime.now()  # <-- 3. Get the current time again
+end_time = datetime.datetime.now()
 elapsed_time = end_time - start_time
 print(f"Processing finished at {end_time}. Total time taken: {elapsed_time}")

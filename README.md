@@ -2,8 +2,8 @@
 TSM-AdvDaBa - Large database experiment with Neo4j
 
 ## Status
-- Temps d'éxécution 38 minutes / 2GB RAM / 2-3 CPU / Batch_size_articles = 1000 / neo4j_batch_size = 100
-![Alt text](image.png)
+- Temps d'éxécution 38 minutes / 1.8GB RAM (Python 100MB) / 2-3 CPU / Batch_size_articles = 1000 / neo4j_batch_size = 100
+![Test avec approche url](image-1.png)
 
 ## TODO
 - ~~ajouter un message de début/fin de script qui s'affiche dans le terminal avec le temps total~~
@@ -12,6 +12,7 @@ TSM-AdvDaBa - Large database experiment with Neo4j
 - ~~enlever neo4j du container pour kubernetes~~
 - ~~Déploiement sur kubernetes fonctionnel~~
 - Tester temps d'exécution script sur kubernetes
+- Tester approche avec url au lieu de pvc
 
 ## Commentaires
 - Seulement les articles qui ont un article_id, article_title et author (dict avec _id et name) sont ajoutés à neo4j
@@ -61,7 +62,7 @@ docker system prune -a
     ```
     kubectl describe ns adv-da-ba23-iglwae
     ```
-### JSON
+### JSON (pour information, pas nécessaire avec approche par url)
 - Créer un persistent volume claim (pvc) → Storage → Persistent Volume Claims → Create Persistent Volume Claim
     - Fichier YAML dans le dossier kubernetes `json-data.yaml`
 - Créer un pod temporaire pour envoyer le fichier dessus
@@ -97,7 +98,10 @@ Services → Service Discovery → Services → Create Service
 ```
 kubectl top pod -n adv-da-ba23-iglwae
 ```
-
+### Test de neo4j
+```
+kubectl port-forward -n adv-da-ba23-iglwae neo4jlarge-deployment-6444df6697-ckqw5 --address 0.0.0.0 7687:7687
+```
 ## Ressources
 https://neo4j.com/docs/operations-manual/current/docker/ref-settings/   
 https://stackoverflow.com/questions/76207890/neo4j-docker-compose-to-kubernetes
