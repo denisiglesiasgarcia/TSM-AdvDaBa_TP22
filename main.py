@@ -9,7 +9,9 @@ from collections import deque
 from itertools import islice
 import gc
 import requests
-import io
+import time
+import requests
+import json
 
 # Configure logging
 logging.basicConfig(
@@ -33,102 +35,45 @@ def preprocess_line(line):
     """
     return line.replace('NaN', 'null').replace('NumberInt(', '').replace(')', '')
 
-def preprocess_json(url, buffer_size):
+
+def preprocess_json(url, buffer_size, max_retries=3, timeout=10):
     """
-    Preprocesses a JSON file from a given URL.
+    Preprocesses a JSON file from a given URL with retry logic and improved error handling.
 
     Args:
         url (str): The URL of the JSON file.
         buffer_size (int): The size of the buffer for reading the file.
+        max_retries (int): Maximum number of retries for the request.
+        timeout (int): Timeout for the request in seconds.
 
     Yields:
         str: Preprocessed line from the JSON file.
 
     Raises:
         requests.HTTPError: If there is an error while retrieving the file.
-
     """
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        buffer = bytearray()
-        for chunk in r.iter_content(chunk_size=buffer_size):
-            buffer.extend(chunk)
-            last_newline_pos = buffer.rfind(b'\n')
-            if last_newline_pos != -1:
-                lines = buffer[:last_newline_pos].decode('utf-8').split('\n')
-                buffer = buffer[last_newline_pos + 1:]
-                for line in lines:
-                    yield preprocess_line(line)
-        if buffer:
-            yield preprocess_line(buffer.decode('utf-8'))
-
-# class PreprocessedFile:
-#     def __init__(self, url, buffer_size=4096):  # buffer_size is in bytes
-#         """
-#         Initializes a PreprocessedFile object.
-
-#         Args:
-#             url (str): The name of the file to preprocess.
-#             buffer_size (int, optional): The size of the buffer in bytes. Defaults to 4096.
-#         """
-#         self.generator = preprocess_json(url, buffer_size)
-#         self.buffer = deque()
-#         self.buffer_length = 0  # Track the length of strings in the buffer
-
-#     def append_to_buffer(self, line):
-#         """
-#         Appends a line to the buffer.
-
-#         Args:
-#             line (str): The line to append to the buffer.
-#         """
-#         self.buffer.append(line)
-#         self.buffer_length += len(line)
-
-#     def pop_from_buffer(self):
-#         """
-#         Pops a line from the buffer.
-
-#         Returns:
-#             str: The popped line from the buffer.
-#         """
-#         line = self.buffer.popleft()
-#         self.buffer_length -= len(line)
-#         return line
-
-#     def read(self, size=-1):
-#         """
-#         Reads and returns the specified number of characters from the file.
-
-#         Args:
-#             size (int, optional): The number of characters to read. Defaults to -1, which means read all.
-
-#         Returns:
-#             str: The read characters from the file.
-#         """
-#         while size < 0 or self.buffer_length < size:
-#             try:
-#                 self.append_to_buffer(next(self.generator))
-#             except StopIteration:
-#                 break  # End of generator, return what's left in the buffer
-#         if size < 0:
-#             result = ''.join(self.buffer)
-#             self.buffer.clear()
-#             self.buffer_length = 0
-#         else:
-#             result_list = []
-#             remaining_size = size
-#             while self.buffer and remaining_size > 0:
-#                 line = self.pop_from_buffer()
-#                 result_list.append(line[:remaining_size])
-#                 remaining_size -= len(line)
-#                 if remaining_size < 0:
-#                     # If the last line was too large, put the remaining part back into the buffer
-#                     leftover = line[remaining_size:]
-#                     self.buffer.appendleft(leftover)
-#                     self.buffer_length += len(leftover)
-#             result = ''.join(result_list)
-#         return result
+    attempts = 0
+    while attempts < max_retries:
+        try:
+            with requests.get(url, stream=True, timeout=timeout) as r:
+                r.raise_for_status()
+                buffer = bytearray()
+                for chunk in r.iter_content(chunk_size=buffer_size):
+                    buffer.extend(chunk)
+                    while buffer:
+                        last_newline_pos = buffer.find(b'\n')
+                        if last_newline_pos == -1:
+                            break  # Incomplete line, wait for more data
+                        line = buffer[:last_newline_pos + 1].decode()
+                        buffer = buffer[last_newline_pos + 1:]
+                        yield preprocess_line(line)
+            break  # Successful retrieval, exit the loop
+        except (requests.RequestException, requests.Timeout) as e:
+            attempts += 1
+            print("Attempt {}/{} failed: {}. Retrying...".format(attempts, max_retries, e))
+            time.sleep(1)  # Wait for a second before retrying
+    if attempts == max_retries:
+        raise requests.HTTPError("Failed to retrieve data after {} attempts.".format(max_retries))
 
 class PreprocessedFile:
     def __init__(self, url, buffer_size=4096):  # buffer_size is in bytes
@@ -141,6 +86,7 @@ class PreprocessedFile:
         """
         self.generator = preprocess_json(url, buffer_size)
         self.buffer = deque()
+        self.buffer_length = 0  # Track the length of strings in the buffer
 
     def append_to_buffer(self, line):
         """
@@ -149,7 +95,9 @@ class PreprocessedFile:
         Args:
             line (str): The line to append to the buffer.
         """
-        self.buffer.append(line)
+        if line is not None:
+            self.buffer.append(line)
+            self.buffer_length += len(line)
 
     def pop_from_buffer(self):
         """
@@ -158,7 +106,9 @@ class PreprocessedFile:
         Returns:
             str: The popped line from the buffer.
         """
-        return self.buffer.popleft()
+        line = self.buffer.popleft()
+        self.buffer_length -= len(line)
+        return line
 
     def read(self, size=-1):
         """
@@ -170,7 +120,7 @@ class PreprocessedFile:
         Returns:
             str: The read characters from the file.
         """
-        while size < 0 or len(self.buffer) < size:
+        while size < 0 or self.buffer_length < size:
             try:
                 self.append_to_buffer(next(self.generator))
             except StopIteration:
@@ -178,10 +128,23 @@ class PreprocessedFile:
         if size < 0:
             result = ''.join(self.buffer)
             self.buffer.clear()
+            self.buffer_length = 0
         else:
-            result_list = [self.pop_from_buffer()[:size] for _ in range(size) if self.buffer]
+            result_list = []
+            remaining_size = size
+            while self.buffer and remaining_size > 0:
+                line = self.pop_from_buffer()
+                result_list.append(line[:remaining_size])
+                remaining_size -= len(line)
+                if remaining_size < 0:
+                    # If the last line was too large, put the remaining part back into the buffer
+                    leftover = line[remaining_size:]
+                    self.buffer.appendleft(leftover)
+                    self.buffer_length += len(leftover)
             result = ''.join(result_list)
         return result
+
+
 
 def get_cleaned_data(url, buffer_size):
     """
@@ -199,8 +162,15 @@ def get_cleaned_data(url, buffer_size):
 def parse_ijson_object(cleaned_data, batch_size):
     def chunked_iterable(iterable, size):
         it = iter(iterable)
-        while chunk := list(islice(it, size)):
-            yield chunk
+        while True:
+            try:
+                chunk = list(islice(it, size))
+                if not chunk:
+                    break
+                yield chunk
+            except ijson.common.IncompleteJSONError as e:
+                logging.error(f"Error parsing JSON: {e}")
+                continue
 
     def trim_article(article):
         trimmed_article = {key: article[key] for key in ['_id', 'title', 'references'] if key in article}
