@@ -12,7 +12,7 @@ services:
       # - NEO4J_dbms_memory_pagecache_size=512M
       # - NEO4J_dbms_memory_transaction_total_max=512M
       - NEO4J_PLUGINS=["apoc"]
-    mem_limit: "16g"
+    mem_limit: "3g"
 
   app:
     build:
@@ -26,4 +26,6 @@ services:
       - NEO4J_PASSWORD=testtest
       - NEO4J_URI=bolt://neo4j:7687
       - JSON_FILE=http://vmrum.isc.heia-fr.ch/dblpv13.json
-      - BATCH_SIZE_ARTICLES=10000
+      - BATCH_SIZE_ARTICLES=5000
+      - BATCH_SIZE_APOC=5000
+      - BUFFER_SIZE_PARSER=131072 # 128k
