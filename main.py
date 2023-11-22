@@ -10,8 +10,6 @@ from itertools import islice
 import gc
 import requests
 import time
-import requests
-import json
 
 # Configure logging
 logging.basicConfig(
