@@ -32,9 +32,11 @@ spec:
               value: "http://vmrum.isc.heia-fr.ch/dblpv13.json"
             - name: BATCH_SIZE_ARTICLES
               value: "1000"
+            - name: BATCH_SIZE_APOC
+              value: "1000"
           resources:
             limits:
-              memory: "0.2Gi"
+              memory: "0.5Gi"
             requests:
-              memory: "0.2Gi"
+              memory: "0.5Gi"
 

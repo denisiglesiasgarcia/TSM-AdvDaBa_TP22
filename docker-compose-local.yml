@@ -28,4 +28,4 @@ services:
       - JSON_FILE=http://vmrum.isc.heia-fr.ch/dblpv13.json
       - BATCH_SIZE_ARTICLES=5000
       - BATCH_SIZE_APOC=5000
-      - BUFFER_SIZE_PARSER=131072 # 128k
+

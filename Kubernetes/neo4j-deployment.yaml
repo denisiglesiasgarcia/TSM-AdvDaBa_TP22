@@ -34,4 +34,4 @@ spec:
             - containerPort: 7687
           resources:
             limits:
-              memory: "3.8Gi"
+              memory: "3Gi"
