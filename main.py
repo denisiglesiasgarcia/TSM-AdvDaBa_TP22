@@ -309,7 +309,7 @@ def send_data_to_neo4j_pool(uri, username, password, authors_batch_chunk, refere
                 id_to_list_index[item_id] = len(result_parts) - 1
             list_index = id_to_list_index[item_id]
             result_parts[list_index].append(item)
-        print(f"result_parts: {len(result_parts)}")
+        # print(f"result_parts: {len(result_parts)}")
         return result_parts
 
     author_parts_raw = split_data(authors_batch_chunk, batch_size_neo4j)

@@ -34,6 +34,7 @@ docker compose -f docker-compose-local.yml up
 Utiliser les fichiers yaml dans le dossier kubernetes pour créer les deployments et services. Il faut aussi créer un namespace au préalable.
 
 #### Variables d'environnement
+
 NEO4J_HOST → nom du service neo4j (localhost pour local ou nom du container pour docker-compose)
 NEO4J_PORT → port du service neo4j (7687)
 NEO4J_USER → nom d'utilisateur de neo4j (neo4j)
@@ -44,19 +45,7 @@ BATCH_SIZE_ARTICLES → taille du batch d'articles juste après ijson (10000)
 BATCH_SIZE_APOC → taille du batch pour apoc lors du chargement des données dans neo4j (5000)
 BATCH_SIZE_NEO4J → avant de charger les données dans neo4j, on a équilibrer les différentes listes d'articles et d'auteurs pour avoir des batchs de taille équilibrée.
 CHUNK_SIZE_HTTPX → taille du cache utilisé par httpx pour lire les lignes du fichier json
-              value: "2560"
-            - name: WORKER_COUNT_NEO4J
-              value: "2"
-          resources:
-            limits:
-              memory: "0.5Gi"
-            requests:
-              memory: "0.5Gi"
-
-## Commentaires
-
-- Seulement les articles qui ont un article_id, article_title et author (dict avec _id et name) sont ajoutés à neo4j
-- Seulement les articles qui ont un article_id, article_title et references (liste d'articles) sont ajoutés à neo4j
+WORKER_COUNT_NEO4J → nombre de threads utilisés pour charger les données dans neo4j
 
 ## Docker
 
