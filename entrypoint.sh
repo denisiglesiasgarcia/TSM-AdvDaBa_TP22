@@ -37,4 +37,4 @@ fi
 
 # Here you can put the command to keep the container alive, if needed.
 echo "Keeping the container alive..."
-tail -f /dev/null
+sleep infinity

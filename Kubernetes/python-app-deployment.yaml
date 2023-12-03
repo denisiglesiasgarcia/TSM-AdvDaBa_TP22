@@ -31,12 +31,17 @@ spec:
             - name: JSON_FILE
               value: "http://vmrum.isc.heia-fr.ch/dblpv13.json"
             - name: BATCH_SIZE_ARTICLES
-              value: "1000"
+              value: "10000"
             - name: BATCH_SIZE_APOC
+              value: "5000"
+            - name: BATCH_SIZE_NEO4J
               value: "1000"
+            - name: CHUNK_SIZE_HTTPX
+              value: "2560"
+            - name: WORKER_COUNT_NEO4J
+              value: "2"
           resources:
             limits:
               memory: "0.5Gi"
             requests:
               memory: "0.5Gi"
-

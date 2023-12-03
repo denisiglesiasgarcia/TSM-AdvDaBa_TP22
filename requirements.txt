@@ -2,3 +2,4 @@ neo4j
 ijson
 tqdm-loggable
 httpx
+cffi

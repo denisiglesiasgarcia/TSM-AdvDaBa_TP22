@@ -3,19 +3,55 @@
 TSM-AdvDaBa - Large database experiment with Neo4j
 
 ## Status
+Temps de chargement: 27min
 
-- Temps d'éxécution 38 minutes / 1.8GB RAM (Python 100MB) / 2-3 CPU / Batch_size_articles = 1000 / neo4j_batch_size = 100
-![Test avec approche url](image-1.png)
+CPU 4 / RAM: max 2.2GB total (Python max 350MB)
 
-## TODO
+![Temps](img/image-2.png)
+![CPU/RAM](img/image.png)
 
-- ~~ajouter un message de début/fin de script qui s'affiche dans le terminal avec le temps total~~
-- ~~faire le nécessaire pour que le gros json ne soit pas en local~~
-- ~~vérifier que le nom des articles est bien lié à son _id~~
-- ~~enlever neo4j du container pour kubernetes~~
-- ~~Déploiement sur kubernetes fonctionnel~~
-- Tester temps d'exécution script sur kubernetes
-- Tester approche avec url au lieu de pvc
+## Résumé
+
+### Texte explicatif
+
+Nous avons utilisé Python comme langague. Pour le développement local nous avons utilisé 2 containers docker qui fonctionnent avec docker-compose.
+Pour kubernetes nous avons utilisé 2 deployments et 2 services. Un pour neo4j et un pour python. Ceux-ci communiquent entre eux avec un service.
+L'approche utilisée consiste à charger le fichier JSON ligne par ligne, corriger les lignes contenant des valeurs non conformes (NumberInt/NaN), puis parser le JSON en streaming à l'aide de la bibliothèque ijson. Ensuite, nous avons créé une liste de dictionnaires contenant les articles et leurs références, ainsi qu'une liste de dictionnaires contenant les articles et leurs auteurs. Enfin, nous avons créé les nœuds et les relations correspondants dans Neo4j.
+
+### Utilisation
+
+Les identifiants de neo4j sont neo4j/testtest
+
+#### Local
+
+Pour lancer l'application en local, il faut lancer le container docker-compose avec la commande suivante:
+```
+docker compose -f docker-compose-local.yml up
+```
+
+#### Kubernetes
+
+Utiliser les fichiers yaml dans le dossier kubernetes pour créer les deployments et services. Il faut aussi créer un namespace au préalable.
+
+#### Variables d'environnement
+NEO4J_HOST → nom du service neo4j (localhost pour local ou nom du container pour docker-compose)
+NEO4J_PORT → port du service neo4j (7687)
+NEO4J_USER → nom d'utilisateur de neo4j (neo4j)
+NEO4J_PASSWORD → mot de passe de neo4j (testtest)
+NEO4J_URI → uri de neo4j (bolt://localhost:7687)
+JSON_FILE → url du fichier json (http://vmrum.isc.heia-fr.ch/dblpv13.json)
+BATCH_SIZE_ARTICLES → taille du batch d'articles juste après ijson (10000)
+BATCH_SIZE_APOC → taille du batch pour apoc lors du chargement des données dans neo4j (5000)
+BATCH_SIZE_NEO4J → avant de charger les données dans neo4j, on a équilibrer les différentes listes d'articles et d'auteurs pour avoir des batchs de taille équilibrée.
+CHUNK_SIZE_HTTPX → taille du cache utilisé par httpx pour lire les lignes du fichier json
+              value: "2560"
+            - name: WORKER_COUNT_NEO4J
+              value: "2"
+          resources:
+            limits:
+              memory: "0.5Gi"
+            requests:
+              memory: "0.5Gi"
 
 ## Commentaires
 
@@ -24,7 +60,7 @@ TSM-AdvDaBa - Large database experiment with Neo4j
 
 ## Docker
 
-### Debug app avec neo4j en local
+### Debug app avec neo4j en local (docker-compose)
 
 Remove all unused containers, networks, and images  
     ⚠️ WARNING! This will remove all images without at least one container associated to them.  
@@ -38,6 +74,8 @@ Lancer le container avec neo4j and python
 ```
 docker compose -f docker-compose-local.yml up
 ```
+
+### Debug app avec neo4j en local (sans docker-compose)
 
 Créer neo4j local avec apoc (ubuntu) pour tests
 
@@ -181,3 +219,4 @@ LIMIT 10
 <https://neo4j.com/docs/operations-manual/current/docker/ref-settings/>
 <https://stackoverflow.com/questions/76207890/neo4j-docker-compose-to-kubernetes>
 <https://neo4j.com/docs/getting-started/cypher-intro/schema/>
+<https://neo4j.com/docs/cypher-manual/current/constraints/examples/>

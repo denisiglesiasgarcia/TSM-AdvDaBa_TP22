@@ -8,7 +8,7 @@ WORKDIR /app
 COPY . /app
 
 # Install netcat
-RUN apt-get update && apt-get install -y netcat-openbsd
+RUN apt-get update && apt-get install -y netcat-openbsd libyajl2
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --trusted-host pypi.python.org -r requirements.txt
