@@ -201,7 +201,7 @@ LIMIT 10
 
 ## Ressources
 
-<https://neo4j.com/docs/operations-manual/current/docker/ref-settings/>
-<https://stackoverflow.com/questions/76207890/neo4j-docker-compose-to-kubernetes>
-<https://neo4j.com/docs/getting-started/cypher-intro/schema/>
-<https://neo4j.com/docs/cypher-manual/current/constraints/examples/>
+- <https://neo4j.com/docs/operations-manual/current/docker/ref-settings/>
+- <https://stackoverflow.com/questions/76207890/neo4j-docker-compose-to-kubernetes>
+- <https://neo4j.com/docs/getting-started/cypher-intro/schema/>
+- <https://neo4j.com/docs/cypher-manual/current/constraints/examples/>
