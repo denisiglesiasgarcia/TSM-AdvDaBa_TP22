@@ -25,7 +25,7 @@ Les identifiants de neo4j sont neo4j/testtest
 
 #### Kubernetes
 
-Utiliser les fichiers yaml dans le dossier kubernetes pour créer les deployments et services. Il faut aussi créer un namespace au préalable.
+Utiliser les fichiers yaml dans le dossier kubernetes pour créer les deployments et services. Il faut aussi créer un namespace au préalable. [Lien vers les déploiements/services](#deploymentservices)
 
 #### Variables d'environnement
 
@@ -103,19 +103,19 @@ docker push comfy2665/neo4j_large
 - Créer la variable d'environnement KUBECONFIG avec le path vers le fichier KubeConfig
   - Pour PowerShell:
 
-```
-        $env:KUBECONFIG="C:\path\to\local.yaml
-```
+    ```
+    $env:KUBECONFIG="C:\path\to\local.yaml
+    ```
   - Pour CMD:
 
-        ```
-        set KUBECONFIG=C:\path\to\local.yaml
-        ```
+      ```
+      set KUBECONFIG=C:\path\to\local.yaml
+      ```
   - Pour Linux:
 
-        ```
-        export KUBECONFIG=/path/to/local.yaml
-        ```
+      ```
+      export KUBECONFIG=/path/to/local.yaml
+      ```
 
 - Créer un namespace
   - local (en dessous de la maison à gauche) → Projects/Namespaces → Create Namespace
