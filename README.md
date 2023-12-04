@@ -3,6 +3,7 @@
 TSM-AdvDaBa - Large database experiment with Neo4j
 
 ## Status
+
 Temps de chargement: 27min
 
 CPU 4 / RAM: max 2.2GB total (Python max 350MB)
@@ -22,13 +23,6 @@ L'approche utilisée consiste à charger le fichier JSON ligne par ligne, corrig
 
 Les identifiants de neo4j sont neo4j/testtest
 
-#### Local
-
-Pour lancer l'application en local, il faut lancer le container docker-compose avec la commande suivante:
-```
-docker compose -f docker-compose-local.yml up
-```
-
 #### Kubernetes
 
 Utiliser les fichiers yaml dans le dossier kubernetes pour créer les deployments et services. Il faut aussi créer un namespace au préalable.
@@ -42,7 +36,7 @@ Utiliser les fichiers yaml dans le dossier kubernetes pour créer les deployment
 | NEO4J_USER            | Nom d'utilisateur de neo4j (neo4j)                                                             |
 | NEO4J_PASSWORD        | Mot de passe de neo4j (testtest)                                                               |
 | NEO4J_URI             | URI de neo4j (bolt://localhost:7687)                                                           |
-| JSON_FILE             | URL du fichier JSON (http://vmrum.isc.heia-fr.ch/dblpv13.json)                                   |
+| JSON_FILE             | URL du fichier JSON (<http://vmrum.isc.heia-fr.ch/dblpv13.json>)                                   |
 | BATCH_SIZE_ARTICLES   | Taille du batch d'articles juste après ijson (10000)                                            |
 | BATCH_SIZE_APOC       | Taille du batch pour apoc lors du chargement des données dans neo4j (5000)                      |
 | BATCH_SIZE_NEO4J      | Avant de charger les données dans neo4j, on a équilibré les différentes listes d'articles et d'auteurs pour avoir des batchs de taille équilibrée. |
@@ -109,9 +103,9 @@ docker push comfy2665/neo4j_large
 - Créer la variable d'environnement KUBECONFIG avec le path vers le fichier KubeConfig
   - Pour PowerShell:
 
-        ```
+```
         $env:KUBECONFIG="C:\path\to\local.yaml
-        ```
+```
   - Pour CMD:
 
         ```

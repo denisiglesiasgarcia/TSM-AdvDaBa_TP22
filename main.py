@@ -22,6 +22,22 @@ tqdm_logging.set_level(logging.INFO)
 
 # JSON
 def preprocess_json(url, pattern, chunk_size_httpx, max_retries=3, timeout=10):
+    """
+    Preprocesses a JSON file from a given URL.
+
+    Args:
+        url (str): The URL of the JSON file.
+        pattern (re.Pattern): A regular expression pattern used for substitution.
+        chunk_size_httpx (int): The chunk size for streaming the HTTP response.
+        max_retries (int, optional): The maximum number of retry attempts. Defaults to 3.
+        timeout (int, optional): The timeout duration for the HTTP request. Defaults to 10.
+
+    Yields:
+        str: Processed lines from the JSON file.
+
+    Raises:
+        httpx.HTTPError: If the data retrieval fails after the maximum number of retry attempts.
+    """
     attempts = 0
     while attempts < max_retries:
         try:
