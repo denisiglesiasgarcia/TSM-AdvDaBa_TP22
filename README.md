@@ -35,17 +35,19 @@ Utiliser les fichiers yaml dans le dossier kubernetes pour créer les deployment
 
 #### Variables d'environnement
 
-NEO4J_HOST → nom du service neo4j (localhost pour local ou nom du container pour docker-compose)
-NEO4J_PORT → port du service neo4j (7687)
-NEO4J_USER → nom d'utilisateur de neo4j (neo4j)
-NEO4J_PASSWORD → mot de passe de neo4j (testtest)
-NEO4J_URI → uri de neo4j (bolt://localhost:7687)
-JSON_FILE → url du fichier json (http://vmrum.isc.heia-fr.ch/dblpv13.json)
-BATCH_SIZE_ARTICLES → taille du batch d'articles juste après ijson (10000)
-BATCH_SIZE_APOC → taille du batch pour apoc lors du chargement des données dans neo4j (5000)
-BATCH_SIZE_NEO4J → avant de charger les données dans neo4j, on a équilibrer les différentes listes d'articles et d'auteurs pour avoir des batchs de taille équilibrée.
-CHUNK_SIZE_HTTPX → taille du cache utilisé par httpx pour lire les lignes du fichier json
-WORKER_COUNT_NEO4J → nombre de threads utilisés pour charger les données dans neo4j
+| Variable              | Description                                                                                     |
+|-----------------------|-------------------------------------------------------------------------------------------------|
+| NEO4J_HOST            | Nom du service neo4j (localhost pour local ou nom du container pour docker-compose)            |
+| NEO4J_PORT            | Port du service neo4j (7687)                                                                   |
+| NEO4J_USER            | Nom d'utilisateur de neo4j (neo4j)                                                             |
+| NEO4J_PASSWORD        | Mot de passe de neo4j (testtest)                                                               |
+| NEO4J_URI             | URI de neo4j (bolt://localhost:7687)                                                           |
+| JSON_FILE             | URL du fichier JSON (http://vmrum.isc.heia-fr.ch/dblpv13.json)                                   |
+| BATCH_SIZE_ARTICLES   | Taille du batch d'articles juste après ijson (10000)                                            |
+| BATCH_SIZE_APOC       | Taille du batch pour apoc lors du chargement des données dans neo4j (5000)                      |
+| BATCH_SIZE_NEO4J      | Avant de charger les données dans neo4j, on a équilibré les différentes listes d'articles et d'auteurs pour avoir des batchs de taille équilibrée. |
+| CHUNK_SIZE_HTTPX      | Taille du cache utilisé par httpx pour lire les lignes du fichier JSON                          |
+| WORKER_COUNT_NEO4J    | Nombre de threads utilisés pour charger les données dans neo4j                                 |
 
 ## Docker
 
