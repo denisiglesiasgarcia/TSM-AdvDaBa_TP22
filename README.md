@@ -25,7 +25,7 @@ Les identifiants de neo4j sont neo4j/testtest
 
 #### Kubernetes
 
-Utiliser les fichiers yaml dans le dossier kubernetes pour créer les deployments et services. Il faut aussi créer un namespace au préalable. [Lien vers les déploiements/services](#deploymentservices)
+Utiliser les fichiers yaml dans le dossier kubernetes pour créer les deployments et services. Il faut aussi créer un namespace au préalable. [Lien vers les déploiements/services](https://github.com/denisiglesiasgarcia/TSM-AdvDaBa_TP22#deploymentsservices)
 
 #### Variables d'environnement
 
