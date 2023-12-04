@@ -113,7 +113,25 @@ def main():
             self.buffer_length = 0  # Track the length of strings in the buffer
 
         def append_to_buffer(self, line):
-            if line is not None:
+            exclude_terms = ('"abstract"',
+                             '"lang"',
+                             '"page_end"',
+                             '"page_start"',
+                             '"publisher"',
+                             '"volume"',
+                             '"year"',
+                             '"pdf"',
+                             '"type"',
+                             '"n_citation"',
+                             '"name_d"',
+                             '"raw"',
+                             '"issue"',
+                             '"issn"',
+                             '"isbn"',
+                             '"doi"',
+                             ) 
+            if line is not None and not line.startswith(exclude_terms):
+                # print(line)
                 self.buffer.append(line)
                 self.buffer_length += len(line)
 
@@ -205,7 +223,7 @@ def main():
         for articles_chunk in chunked_iterable(cleaned_data, batch_size):
             yield process_articles_chunk(articles_chunk)
 
-
+ 
 
     # Neo4j
     def neo4j_startup(uri, username, password):
@@ -345,7 +363,7 @@ def main():
 
     def main(neo4j_uri, neo4j_user, neo4j_password, url, BATCH_SIZE, TOTAL_ARTICLES, batch_size_apoc, pattern, chunk_size_httpx, worker_count_neo4j, batch_size_neo4j):
         # Neo4j optimization
-        neo4j_startup(neo4j_uri, neo4j_user, neo4j_password)
+        #neo4j_startup(neo4j_uri, neo4j_user, neo4j_password)
 
         # Parse JSON file and get a generator of cleaned data
         cleaned_data_generator = get_cleaned_data(url, pattern, chunk_size_httpx)
