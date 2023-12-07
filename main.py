@@ -52,7 +52,7 @@ def preprocess_json(url, pattern, chunk_size_httpx, max_retries=3, timeout=10):
                             break  # Incomplete line, wait for more data
                         line = buffer[:last_newline_pos + 1].decode()
                         buffer = buffer[last_newline_pos + 1:]
-                        line = pattern.sub(lambda x: 'null' if x.group() == 'NaN' else x.group(1), line)
+                        line = line.replace('NaN', 'null').replace('NumberInt(', '').replace(')', '')
                         yield line
             break  # Successful retrieval, exit the loop
         except (httpx.HTTPError, httpx.TimeoutException) as e:
@@ -73,25 +73,7 @@ class PreprocessedFile:
     #         self.buffer.append(line)
     #         self.buffer_length += len(line)
     def append_to_buffer(self, line):
-        exclude_terms = ('"abstract"',
-                    '"lang"',
-                    '"page_end"',
-                    '"page_start"',
-                    '"publisher"',
-                    '"volume"',
-                    '"year"',
-                    '"pdf"',
-                    '"type"',
-                    '"n_citation"',
-                    '"name_d"',
-                    '"raw"',
-                    '"issue"',
-                    '"issn"',
-                    '"isbn"',
-                    '"doi"',
-                    ) 
-        if line is not None and not line.startswith(exclude_terms):
-            # print(line)
+        if line is not None:
             self.buffer.append(line)
             self.buffer_length += len(line)
 
@@ -351,7 +333,7 @@ def send_data_to_neo4j_pool(uri, username, password, authors_batch_chunk, refere
         return result_parts
 
     author_parts_raw = split_data(authors_batch_chunk, batch_size_neo4j)
-    ref_parts_raw = split_data(references_batch_chunk, batch_size_neo4j/25)
+    ref_parts_raw = split_data(references_batch_chunk, batch_size_neo4j/10)
 
     tasks = []
     for i in range(worker_count_neo4j):

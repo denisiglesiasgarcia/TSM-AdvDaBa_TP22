@@ -96,7 +96,7 @@ def main():
                                 break  # Incomplete line, wait for more data
                             line = buffer[:last_newline_pos + 1].decode()
                             buffer = buffer[last_newline_pos + 1:]
-                            line = pattern.sub(lambda x: 'null' if x.group() == 'NaN' else x.group(1), line)
+                            line = line.replace('NaN', 'null').replace('NumberInt(', '').replace(')', '')
                             yield line
                 break  # Successful retrieval, exit the loop
             except (httpx.HTTPError, httpx.TimeoutException) as e:
@@ -145,7 +145,6 @@ def main():
                 line_length = len(line)
 
                 if line_length <= remaining_size:
-                    print(result_list)
                     result_list.append(line)
                     remaining_size -= line_length
                 else:
@@ -154,8 +153,9 @@ def main():
                     self.buffer.appendleft(line[remaining_size:])
                     self.buffer_length += line_length - remaining_size
                     break
-
-            return ''.join(result_list)
+            
+            joined_result = ''.join(result_list)
+            return joined_result
 
     def get_cleaned_data(url, pattern, chunk_size_httpx):
         preprocessed_file = PreprocessedFile(url, pattern, chunk_size_httpx)
@@ -379,6 +379,8 @@ def main():
 
     TOTAL_ARTICLES = 5_810_000
     pattern = re.compile(r'NaN|NumberInt\((.*?)\)')
+
+
 
     # start
     start_time = datetime.datetime.now()
