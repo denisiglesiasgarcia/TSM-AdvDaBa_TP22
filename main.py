@@ -68,8 +68,30 @@ class PreprocessedFile:
         self.buffer = deque()
         self.buffer_length = 0  # Track the length of strings in the buffer
 
+    # def append_to_buffer(self, line):
+    #     if line is not None:
+    #         self.buffer.append(line)
+    #         self.buffer_length += len(line)
     def append_to_buffer(self, line):
-        if line is not None:
+        exclude_terms = ('"abstract"',
+                    '"lang"',
+                    '"page_end"',
+                    '"page_start"',
+                    '"publisher"',
+                    '"volume"',
+                    '"year"',
+                    '"pdf"',
+                    '"type"',
+                    '"n_citation"',
+                    '"name_d"',
+                    '"raw"',
+                    '"issue"',
+                    '"issn"',
+                    '"isbn"',
+                    '"doi"',
+                    ) 
+        if line is not None and not line.startswith(exclude_terms):
+            # print(line)
             self.buffer.append(line)
             self.buffer_length += len(line)
 

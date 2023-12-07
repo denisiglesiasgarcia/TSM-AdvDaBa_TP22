@@ -113,24 +113,7 @@ def main():
             self.buffer_length = 0  # Track the length of strings in the buffer
 
         def append_to_buffer(self, line):
-            exclude_terms = ('"abstract"',
-                             '"lang"',
-                             '"page_end"',
-                             '"page_start"',
-                             '"publisher"',
-                             '"volume"',
-                             '"year"',
-                             '"pdf"',
-                             '"type"',
-                             '"n_citation"',
-                             '"name_d"',
-                             '"raw"',
-                             '"issue"',
-                             '"issn"',
-                             '"isbn"',
-                             '"doi"',
-                             ) 
-            if line is not None and not line.startswith(exclude_terms):
+            if line is not None:
                 # print(line)
                 self.buffer.append(line)
                 self.buffer_length += len(line)
@@ -162,6 +145,7 @@ def main():
                 line_length = len(line)
 
                 if line_length <= remaining_size:
+                    print(result_list)
                     result_list.append(line)
                     remaining_size -= line_length
                 else:
