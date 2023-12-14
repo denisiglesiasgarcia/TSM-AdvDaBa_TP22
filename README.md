@@ -43,9 +43,7 @@ Utiliser les fichiers yaml dans le dossier kubernetes pour créer les deployment
 | JSON_FILE             | URL du fichier JSON (<http://vmrum.isc.heia-fr.ch/dblpv13.json>)                                   |
 | BATCH_SIZE_ARTICLES   | Taille du batch d'articles juste après ijson (10000)                                            |
 | BATCH_SIZE_APOC       | Taille du batch pour apoc lors du chargement des données dans neo4j (5000)                      |
-| BATCH_SIZE_NEO4J      | Avant de charger les données dans neo4j, on a équilibré les différentes listes d'articles et d'auteurs pour avoir des batchs de taille équilibrée. |
 | CHUNK_SIZE_HTTPX      | Taille du cache utilisé par httpx pour lire les lignes du fichier JSON                          |
-| WORKER_COUNT_NEO4J    | Nombre de threads utilisés pour charger les données dans neo4j                                 |
 
 ### Docker
 
