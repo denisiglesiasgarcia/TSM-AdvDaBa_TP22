@@ -33,7 +33,7 @@ spec:
             - name: BATCH_SIZE_ARTICLES
               value: "10000"
             - name: BATCH_SIZE_APOC
-              value: "50000"
+              value: "10000"
             - name: CHUNK_SIZE_HTTPX
               value: "1024"
           resources:
