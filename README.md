@@ -14,14 +14,12 @@ TSM-AdvDaBa - Large database experiment with Neo4j
 | Credentials neo4j | neo4j/testtest |
 | ID du pod avec logs | python-app-deployment-777679b74f-7vcj6 |
 | Temps du chargement | 0000 s |
-| Liens git repository| https://github.com/denisiglesiasgarcia/TSM-AdvDaBa_TP22.git |
+| Liens git repository| <https://github.com/denisiglesiasgarcia/TSM-AdvDaBa_TP22.git> |
 |Performance | {"team"="IglWaeAdvDaBa23", "N"=XX, "RAM_MB"="3800", "seconds"="YY"}|
 
 Nous avons utilisé Python comme langague. Pour le développement local nous avons utilisé 2 containers docker qui fonctionnent avec docker-compose.
 Pour kubernetes nous avons utilisé 2 deployments et 1 service. Un pour neo4j et un pour python. Ceux-ci communiquent entre eux avec un service.
 L'approche utilisée consiste à charger le fichier JSON ligne par ligne, corriger les lignes contenant des valeurs non conformes (NumberInt/NaN), puis parser le JSON en streaming à l'aide de la bibliothèque ijson. Ensuite, nous avons créé une liste de dictionnaires contenant les articles et leurs références, ainsi qu'une liste de dictionnaires contenant les articles et leurs auteurs. Enfin, nous avons créé les nœuds et les relations correspondants dans Neo4j.
-
-
 
 ## Détails de l'implémentation
 
