@@ -1,4 +1,4 @@
-import ijson.backends.yajl2_c as ijson
+import ijson
 from neo4j import GraphDatabase
 import datetime
 from tqdm_loggable.auto import tqdm
@@ -317,7 +317,7 @@ def main():
         function(*args)
 
     def send_data_to_neo4j_pool(uri, username, password, authors_batch_chunk, references_batch_chunk, batch_size_apoc, worker_count_neo4j, batch_size_neo4j):
-        def split_data(batch_chunk, batch_size_neo4j):
+        def split_data(batch_chunk, batch_size_neo4j, is_ref_data=False):
             id_to_list_index = {}
             result_parts = []
 
@@ -334,7 +334,7 @@ def main():
             return result_parts
 
         author_parts_raw = split_data(authors_batch_chunk, batch_size_neo4j)
-        ref_parts_raw = split_data(references_batch_chunk, batch_size_neo4j/25)
+        ref_parts_raw = split_data(references_batch_chunk, batch_size_neo4j, is_ref_data=True)
 
         tasks = []
         for i in range(worker_count_neo4j):

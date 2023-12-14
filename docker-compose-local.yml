@@ -12,7 +12,7 @@ services:
       # - NEO4J_dbms_memory_pagecache_size=512M
       # - NEO4J_dbms_memory_transaction_total_max=512M
       - NEO4J_PLUGINS=["apoc"]
-    mem_limit: "3.5g"
+    mem_limit: "16g"
 
   app:
     build:
@@ -20,15 +20,13 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - neo4j
-    mem_limit: "0.5g"
+    mem_limit: "8g"
     environment:
       - NEO4J_USER=neo4j
       - NEO4J_PASSWORD=testtest
       - NEO4J_URI=bolt://neo4j:7687
       - JSON_FILE=http://vmrum.isc.heia-fr.ch/dblpv13.json
       - BATCH_SIZE_ARTICLES=10000
-      - BATCH_SIZE_APOC=5000
-      - BATCH_SIZE_NEO4J=1000
-      - CHUNK_SIZE_HTTPX=2560
-      - WORKER_COUNT_NEO4J=2
+      - BATCH_SIZE_APOC=10000
+      - CHUNK_SIZE_HTTPX=1024
 

@@ -8,9 +8,8 @@ from collections import deque
 from itertools import islice
 import time
 import httpx
-import re
 import os
-from multiprocessing import Pool
+import re
 
 # Configure logging
 logging.basicConfig(
@@ -21,13 +20,12 @@ logging.basicConfig(
 tqdm_logging.set_level(logging.INFO)
 
 # JSON
-def preprocess_json(url, pattern, chunk_size_httpx, max_retries=3, timeout=10):
+def preprocess_json(url, chunk_size_httpx, max_retries=3, timeout=10):
     """
     Preprocesses a JSON file from a given URL.
 
     Args:
         url (str): The URL of the JSON file.
-        pattern (re.Pattern): A regular expression pattern used for substitution.
         chunk_size_httpx (int): The chunk size for streaming the HTTP response.
         max_retries (int, optional): The maximum number of retry attempts. Defaults to 3.
         timeout (int, optional): The timeout duration for the HTTP request. Defaults to 10.
@@ -52,7 +50,8 @@ def preprocess_json(url, pattern, chunk_size_httpx, max_retries=3, timeout=10):
                             break  # Incomplete line, wait for more data
                         line = buffer[:last_newline_pos + 1].decode()
                         buffer = buffer[last_newline_pos + 1:]
-                        line = line.replace('NaN', 'null').replace('NumberInt(', '').replace(')', '')
+                        line = re.sub(r'NaN', 'null', line)
+                        line = re.sub(r'NumberInt\((.*?)\)', r'\1', line)
                         yield line
             break  # Successful retrieval, exit the loop
         except (httpx.HTTPError, httpx.TimeoutException) as e:
@@ -63,26 +62,58 @@ def preprocess_json(url, pattern, chunk_size_httpx, max_retries=3, timeout=10):
         raise httpx.HTTPError(f"Failed to retrieve data after {max_retries} attempts.")
 
 class PreprocessedFile:
-    def __init__(self, url, pattern, chunk_size_httpx):
-        self.generator = preprocess_json(url, pattern, chunk_size_httpx)
+    def __init__(self, url, chunk_size_httpx):
+        """
+        Initialize the class with the given parameters.
+
+        Args:
+            url (str): The URL to fetch the JSON data from.
+            chunk_size_httpx (int): The chunk size to use for HTTPX requests.
+
+        Returns:
+            None
+        """
+        self.generator = preprocess_json(url, chunk_size_httpx)
         self.buffer = deque()
         self.buffer_length = 0  # Track the length of strings in the buffer
 
-    # def append_to_buffer(self, line):
-    #     if line is not None:
-    #         self.buffer.append(line)
-    #         self.buffer_length += len(line)
     def append_to_buffer(self, line):
+        """
+        Appends a line to the buffer.
+
+        Args:
+            line (str): The line to be appended to the buffer.
+
+        Returns:
+            None
+        """
         if line is not None:
             self.buffer.append(line)
             self.buffer_length += len(line)
 
     def pop_from_buffer(self):
-        line = self.buffer.popleft()
-        self.buffer_length -= len(line)
-        return line
+            """
+            Removes and returns the first line from the buffer.
+
+            Returns:
+                str: The first line from the buffer.
+            """
+            line = self.buffer.popleft()
+            self.buffer_length -= len(line)
+            return line
 
     def read(self, size=-1):
+        """
+        Reads and returns a specified number of characters from the buffer.
+
+        Args:
+            size (int, optional): The number of characters to read from the buffer. 
+                                  If not specified or set to -1, reads all characters.
+
+        Returns:
+            str: The characters read from the buffer.
+
+        """
         while size < 0 or self.buffer_length < size:
             try:
                 line = next(self.generator)
@@ -115,13 +146,45 @@ class PreprocessedFile:
 
         return ''.join(result_list)
 
-def get_cleaned_data(url, pattern, chunk_size_httpx):
-    preprocessed_file = PreprocessedFile(url, pattern, chunk_size_httpx)
+def get_cleaned_data(url, chunk_size_httpx):
+    """
+    Retrieves cleaned data from a given URL using a specified chunk size.
+
+    Args:
+        url (str): The URL to retrieve the data from.
+        chunk_size_httpx (int): The chunk size to use for processing the data.
+
+    Returns:
+        objects: The cleaned data objects.
+    """
+    preprocessed_file = PreprocessedFile(url, chunk_size_httpx)
     objects = ijson.items(preprocessed_file, 'item')
     return objects
 
 def parse_ijson_object(cleaned_data, batch_size):
+    """
+    Parses a JSON object containing articles and extracts valid authors and references.
+
+    Args:
+        cleaned_data (list): A list of JSON objects representing articles.
+        batch_size (int): The size of each batch of articles to process.
+
+    Yields:
+        tuple: A tuple containing two lists - authors_batch_chunk and references_batch_chunk.
+            authors_batch_chunk (list): A list of JSON objects representing articles with valid authors.
+            references_batch_chunk (list): A list of JSON objects representing articles with references.
+    """
     def chunked_iterable(iterable, size):
+        """
+        Splits an iterable into chunks of a specified size.
+
+        Args:
+            iterable (iterable): The iterable to be split into chunks.
+            size (int): The size of each chunk.
+
+        Yields:
+            list: A chunk of the specified size from the iterable.
+        """
         it = iter(iterable)
         while True:
             chunk = list(islice(it, size))
@@ -130,49 +193,67 @@ def parse_ijson_object(cleaned_data, batch_size):
             yield chunk
 
     def process_articles_chunk(articles_chunk):
+        article_id_article_title_list = []
+        authors_id_author_name_list = []
+        article_id_author_id_list = []
+        article_id_reference_id_list = []
 
-        authors_batch_chunk = []
-        references_batch_chunk = []
-
-        def is_valid(item):
-            # Check for presence of _id and title
-            has_id_and_title = item.get('_id') not in [None, 'null', ''] and item.get('title') not in [None, 'null', '']
-            # Check for presence of authors or references
-            has_authors_or_references = bool(item.get('authors')) or bool(item.get('references'))
-            return has_id_and_title and has_authors_or_references
-
-        def transform_item(item):
-            valid_authors = [author for author in item.get('authors', []) 
-                            if author.get('_id') and author.get('name') and len(author) == 2]
-            references = item.get('references', [])
-
-            if valid_authors:
-                json_author = {'_id': item['_id'], 'title': item['title'], 'authors': valid_authors}
-                authors_batch_chunk.append(json_author)
-
-            if references:
-                json_ref = {'_id': item['_id'], 'title': item['title'], 'references': references}
-                references_batch_chunk.append(json_ref)
+        # Sets to keep track of seen identifiers
+        seen_pair_article_id_article_title = set()
+        seen_pair_authors_id_author_name = set()
+        seen_pair_article_id_author_id = set()
+        seen_pair_article_id_reference_id = set()
 
         for item in articles_chunk:
-            if is_valid(item):
-                transform_item(item)
+            article_id = item.get('_id')
+            article_title = item.get('title')
 
-        authors_batch_chunk = sort_list_of_dicts(authors_batch_chunk, '_id')
-        references_batch_chunk = sort_list_of_dicts(references_batch_chunk, '_id')
-        return authors_batch_chunk, references_batch_chunk
+            # article_list
+            if article_id and article_title:
+                if ((article_id, article_title) not in seen_pair_article_id_article_title):
+                    seen_pair_article_id_article_title.add((article_id, article_title))
+                    article_id_article_title_list.append({'_id': article_id, 'title': article_title})
+
+            # authors
+            authors = item.get('authors', [])
+            for author in authors:
+                if 'name' in author and '_id' in author and len(author) == 2:
+                    author_id = author['_id']
+                    author_name = author['name']
+                    # Check if this author hasn't been processed before
+                    if ((author_id, author_name) not in seen_pair_authors_id_author_name):
+                        seen_pair_authors_id_author_name.add((author_id, author_name))
+                        authors_id_author_name_list.append({'_id': author_id, 'name': author_name})
+
+                    # Check if this article-author pair hasn't been processed before
+                    if ((article_id, author_id) not in seen_pair_article_id_author_id):
+                        seen_pair_article_id_author_id.add((article_id, author_id))
+                        article_id_author_id_list.append({'article_id': article_id, 'author_id': author_id})
+
+            # references
+            references = item.get('references', [])
+            if references:
+                for ref in references:
+                    if ((article_id, ref) not in seen_pair_article_id_reference_id):
+                        seen_pair_article_id_reference_id.add((article_id, ref))
+                        article_id_reference_id_list.append({'mainArticleId': article_id, 'refId': ref})
+
+        return article_id_article_title_list, authors_id_author_name_list, article_id_author_id_list, article_id_reference_id_list
 
     for articles_chunk in chunked_iterable(cleaned_data, batch_size):
         yield process_articles_chunk(articles_chunk)
 
-def sort_list_of_dicts(list_of_dicts, key):
-    def get_sort_key(dict_item):
-        return dict_item.get(key)
-
-    return sorted(list_of_dicts, key=get_sort_key)
-
 # Neo4j
 def neo4j_startup(uri, username, password):
+    """
+    Connects to a Neo4j database using the provided URI, username, and password.
+    Sets up index constraints for the Neo4j database.
+    
+    Parameters:
+    - uri (str): The URI of the Neo4j database.
+    - username (str): The username for authentication.
+    - password (str): The password for authentication.
+    """
     def neo4j_index_constraints(session):
         with session.begin_transaction() as tx:
             # index
@@ -193,174 +274,111 @@ def neo4j_startup(uri, username, password):
     # Close the driver
     driver.close()
 
-def prepare_batches(raw_data):
-    seen_authors = set()
-    seen_articles = set()
-    seen_relations = set()
+def send_data_to_neo4j(neo4j_uri, neo4j_user, neo4j_password,\
+                       article_id_article_title_list,\
+                        authors_id_author_name_list,\
+                        article_id_author_id_list,\
+                        article_id_reference_id_list,\
+                        batch_size_apoc):
+    """
+    Sends data to Neo4j database using the provided parameters.
 
-    articles_batch = [{
-        '_id': item['_id'],
-        'title': item['title']
-    } for item in raw_data if item['_id'] not in seen_articles and item['_id'] and item.get('title') and seen_articles.add(item['_id']) is None]
+    Parameters:
+    - neo4j_uri (str): The URI of the Neo4j database.
+    - neo4j_user (str): The username for authentication.
+    - neo4j_password (str): The password for authentication.
+    - article_id_article_title_list (list): A list of dictionaries containing article IDs and titles.
+    - authors_id_author_name_list (list): A list of dictionaries containing author IDs and names.
+    - article_id_author_id_list (list): A list of dictionaries containing article IDs and author IDs.
+    - article_id_reference_id_list (list): A list of dictionaries containing article IDs and reference IDs.
+    - batch_size_apoc (int): The batch size for processing data in Neo4j.
 
-    authors_batch = []
-    relations_batch = []
+    Returns:
+    None
+    """
+    def send_article_id_article_title_batch(session, article_id_article_title_list, batch_size_apoc):
+        query = """
+            CALL apoc.periodic.iterate(
+                'UNWIND $batch AS article RETURN article',
+                'MERGE (a:Article {_id: article._id}) ON CREATE SET a.title = article.title',
+                {batchSize: $batch_size_apoc, parallel: false, params: {batch: $batch}}
+            )
+        """
+        session.run(query, batch=article_id_article_title_list, batch_size_apoc=batch_size_apoc)
 
-    for item in raw_data:
-        article_id = item.get('_id')
-        if not article_id:
-            continue
-        for author in item.get('authors', []):
-            author_id = author.get('_id')
-            author_name = author.get('name')
-            author_key = (author_id, author_name)
-            if author_key not in seen_authors and all(author_key):
-                seen_authors.add(author_key)
-                authors_batch.append({'_id': author_id, 'name': author_name})
+    def send_authors_id_author_name_batch(session, authors_id_author_name_list, batch_size_apoc):
+        query = """
+            CALL apoc.periodic.iterate(
+                'UNWIND $batch AS author RETURN author',
+                'MERGE (a:Author {_id: author._id}) ON CREATE SET a.name = author.name',
+                {batchSize: $batch_size_apoc, parallel: false, params: {batch: $batch}}
+            )
+        """
+        session.run(query, batch=authors_id_author_name_list, batch_size_apoc=batch_size_apoc)
 
-            relation = (article_id, author_id)
-            if relation not in seen_relations and all(relation):
-                seen_relations.add(relation)
-                relations_batch.append({'article_id': article_id, 'author_id': author_id})
+    def send_article_id_author_id_batch(session, article_id_author_id_list, batch_size_apoc):
+        query = """
+            CALL apoc.periodic.iterate(
+                'UNWIND $batch AS relation RETURN relation',
+                'MATCH (a:Article {_id: relation.article_id}) MATCH (auth:Author {_id: relation.author_id}) MERGE (auth)-[:AUTHORED]->(a)',
+                {batchSize: $batch_size_apoc, parallel: false, params: {batch: $batch}}
+            )
+        """
+        session.run(query, batch=article_id_author_id_list, batch_size_apoc=batch_size_apoc)
 
-    relations_batch = sort_list_of_dicts(relations_batch, 'article_id')
-
-    # print(f"authors_batch: {len(authors_batch)}")
-    # print(f"articles_batch: {len(articles_batch)}")
-    # print(f"relations_batch: {len(relations_batch)}")
-    return authors_batch, articles_batch, relations_batch
-
-def prepare_relations_refs(raw_refs_list):
-    unique_relations = set()
-    for item in raw_refs_list:
-        main_article_id = item['_id']
-        for ref_id in item['references']:
-            unique_relations.add((main_article_id, ref_id))
-
-    refs_batch = [{'mainArticleId': main_article, 'refId': ref} for main_article, ref in unique_relations]
-    return refs_batch
-
-def send_batch(articles_batch_raw, refs_batch_raw, batch_size_apoc, uri, username, password):
-    driver = GraphDatabase.driver(uri, auth=(username, password))
-
-    # Prepare the batches
-    authors_batch, articles_batch, relations_batch = prepare_batches(articles_batch_raw)
-    refs_batch = prepare_relations_refs(refs_batch_raw) if refs_batch_raw else None
-    # if authors_batch:
-    #     print(f"authors_batch: {len(authors_batch)}")
-    # if articles_batch:
-    #     print(f"articles_batch: {len(articles_batch)}")
-    # if relations_batch:
-    #     print(f"relations_batch: {len(relations_batch)}")
-    # if refs_batch:
-    #     print(f"refs_batch: {len(refs_batch)}")
-
+    def send_article_id_reference_id_batch(session, article_id_reference_id_list, batch_size_apoc):
+        query = """
+            CALL apoc.periodic.iterate(
+                'UNWIND $batch AS relation RETURN relation',
+                'MATCH (mainArticle:Article {_id: relation.mainArticleId}) MERGE (refArticle:Article {_id: relation.refId}) MERGE (mainArticle)-[:REFERENCES]->(refArticle)',
+                {batchSize: $batch_size_apoc, parallel: false, params: {batch: $batch}}
+            )
+        """
+        session.run(query, batch=article_id_reference_id_list, batch_size_apoc=batch_size_apoc)
+    
+    driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
+    
     with driver.session() as session:
-        # Define your queries
-        queries = {
-            'authors': {
-                'batch': authors_batch,
-                'cypher': """
-                    CALL apoc.periodic.iterate(
-                        'UNWIND $batch AS author RETURN author',
-                        'MERGE (a:Author {_id: author._id}) ON CREATE SET a.name = author.name',
-                        {batchSize: $batch_size_apoc, parallel: false, params: {batch: $batch}}
-                    )
-                """ if authors_batch else None
-            },
-            'articles': {
-                'batch': articles_batch,
-                'cypher': """
-                    CALL apoc.periodic.iterate(
-                        'UNWIND $batch AS article RETURN article',
-                        'MERGE (a:Article {_id: article._id}) ON CREATE SET a.title = article.title',
-                        {batchSize: $batch_size_apoc, parallel: false, params: {batch: $batch}}
-                    )
-                """ if articles_batch else None
-            },
-            'authored_relations': {
-                'batch': relations_batch,
-                'cypher': """
-                    CALL apoc.periodic.iterate(
-                        'UNWIND $batch AS relation RETURN relation',
-                        'MATCH (a:Article {_id: relation.article_id}) MATCH (auth:Author {_id: relation.author_id}) MERGE (auth)-[:AUTHORED]->(a)',
-                        {batchSize: $batch_size_apoc, parallel: false, params: {batch: $batch}}
-                    )
-                """ if relations_batch else None
-            },
-            'references': {
-                'batch': refs_batch,
-                'cypher': """
-                    CALL apoc.periodic.iterate(
-                        'UNWIND $batch AS relation RETURN relation',
-                        'MATCH (mainArticle:Article {_id: relation.mainArticleId}) MERGE (refArticle:Article {_id: relation.refId}) MERGE (mainArticle)-[:REFERENCES]->(refArticle)',
-                        {batchSize: $batch_size_apoc, parallel: false, params: {batch: $batch}}
-                    )
-                """ if refs_batch else None
-            }
-        }
-
-        # Execute each query
-        for key in queries:
-            query_info = queries[key]
-            if query_info['batch'] and query_info['cypher']:
-                session.run(query_info['cypher'], batch=query_info['batch'], batch_size_apoc=batch_size_apoc)
+        if article_id_article_title_list:
+            send_article_id_article_title_batch(session, article_id_article_title_list, batch_size_apoc)
+        if authors_id_author_name_list:
+            send_authors_id_author_name_batch(session, authors_id_author_name_list, batch_size_apoc)
+        if article_id_author_id_list:
+            send_article_id_author_id_batch(session, article_id_author_id_list, batch_size_apoc)
+        if article_id_reference_id_list:
+            send_article_id_reference_id_batch(session, article_id_reference_id_list, batch_size_apoc)
 
     driver.close()
 
-def execute_task(task):
-    """
-    Execute a task by calling the specified function with the given arguments.
-    """
-    function, *args = task
-    function(*args)
-
-def send_data_to_neo4j_pool(uri, username, password, authors_batch_chunk, references_batch_chunk, batch_size_apoc, worker_count_neo4j, batch_size_neo4j):
-    def split_data(batch_chunk, batch_size_neo4j):
-        id_to_list_index = {}
-        result_parts = []
-
-        for item in batch_chunk:
-            item_id = item['_id']
-            if item_id not in id_to_list_index:
-                if not result_parts or len(result_parts[-1]) >= batch_size_neo4j:
-                    # Create a new list if the last one is full or doesn't exist
-                    result_parts.append([])
-                id_to_list_index[item_id] = len(result_parts) - 1
-            list_index = id_to_list_index[item_id]
-            result_parts[list_index].append(item)
-        # print(f"result_parts: {len(result_parts)}")
-        return result_parts
-
-    author_parts_raw = split_data(authors_batch_chunk, batch_size_neo4j)
-    ref_parts_raw = split_data(references_batch_chunk, batch_size_neo4j/10)
-
-    tasks = []
-    for i in range(worker_count_neo4j):
-        author_part = author_parts_raw[i] if i < len(author_parts_raw) else []
-        ref_part = ref_parts_raw[i] if i < len(ref_parts_raw) else []
-        tasks.append((send_batch, author_part, ref_part, batch_size_apoc, uri, username, password))
-
-    with Pool(worker_count_neo4j) as p:
-        p.map(execute_task, tasks)
-
-def main(neo4j_uri, neo4j_user, neo4j_password, url, BATCH_SIZE, TOTAL_ARTICLES, batch_size_apoc, pattern, chunk_size_httpx, worker_count_neo4j, batch_size_neo4j):
+def main(neo4j_uri, neo4j_user, neo4j_password, url,\
+        BATCH_SIZE, TOTAL_ARTICLES, batch_size_apoc,\
+        chunk_size_httpx):
     # Neo4j optimization
     neo4j_startup(neo4j_uri, neo4j_user, neo4j_password)
 
     # Parse JSON file and get a generator of cleaned data
-    cleaned_data_generator = get_cleaned_data(url, pattern, chunk_size_httpx)
+    cleaned_data_generator = get_cleaned_data(url, chunk_size_httpx)
 
     # Create the generator
     article_batches_generator = parse_ijson_object(cleaned_data_generator, BATCH_SIZE)
 
     # Initialize tqdm with the total count of articles
-    t = tqdm(total=TOTAL_ARTICLES, unit=' article')
-    for authors_batch_chunk, references_batch_chunk in article_batches_generator:
+    t = tqdm(total=TOTAL_ARTICLES, unit=' article_id')
+    for article_id_article_title_list,\
+        authors_id_author_name_list,\
+        article_id_author_id_list,\
+        article_id_reference_id_list in article_batches_generator:
+        
         # Update the tqdm progress bar with the number of articles processed in this batch
-        t.update(len(authors_batch_chunk) + len(references_batch_chunk))
+        t.update(len(article_id_article_title_list))
+        
         # Process the current batch of articles
-        send_data_to_neo4j_pool(neo4j_uri, neo4j_user, neo4j_password, authors_batch_chunk, references_batch_chunk, batch_size_apoc, worker_count_neo4j, batch_size_neo4j)
+        send_data_to_neo4j(neo4j_uri, neo4j_user, neo4j_password,\
+                                article_id_article_title_list,\
+                                authors_id_author_name_list,\
+                                article_id_author_id_list,\
+                                article_id_reference_id_list,\
+                                batch_size_apoc)
 
     # Close tqdm progress bar
     t.close()
@@ -373,18 +391,14 @@ neo4j_password = os.environ['NEO4J_PASSWORD']
 BATCH_SIZE = int(os.environ['BATCH_SIZE_ARTICLES'])
 batch_size_apoc = int(os.environ['BATCH_SIZE_APOC'])
 chunk_size_httpx = int(os.environ['CHUNK_SIZE_HTTPX'])
-worker_count_neo4j = int(os.environ['WORKER_COUNT_NEO4J'])
-batch_size_neo4j = int(os.environ['BATCH_SIZE_NEO4J'])
-
 TOTAL_ARTICLES = 5_810_000
-pattern = re.compile(r'NaN|NumberInt\((.*?)\)')
 
 # start
 start_time = datetime.datetime.now()
 print(f"Processing started at {start_time}")
 
 # process articles
-main(neo4j_uri, neo4j_user, neo4j_password, url, BATCH_SIZE, TOTAL_ARTICLES, batch_size_apoc, pattern, chunk_size_httpx, worker_count_neo4j, batch_size_neo4j)
+main(neo4j_uri, neo4j_user, neo4j_password, url, BATCH_SIZE, TOTAL_ARTICLES, batch_size_apoc, chunk_size_httpx)
 
 # end
 end_time = datetime.datetime.now()
