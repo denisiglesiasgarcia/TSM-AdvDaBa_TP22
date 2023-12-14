@@ -2,6 +2,22 @@
 
 TSM-AdvDaBa - Large database experiment with Neo4j
 
+# Rendu du travail
+**Informations selon les données moodle.**
+
+| Nom | Valeur |
+|:----------------------:|:-----------------------------|
+| ID du groupe | IglWaeAdvDaBa23 |
+| Namespace | adv-da-ba23-iglwae |
+| ID du pod | neo4jlarge-deployment-6bb5bf5fdb-8ddck |
+| Credentials neo4j | neo4j/testtest |
+| ID du pod avec logs | python-app-deployment-6765b87cd9-hsmqw |
+| Temps du chargement | 0000 s |
+| Liens git repository| https://github.com/denisiglesiasgarcia/TSM-AdvDaBa_TP22.git |
+|Performance | {"team"="IglWaeAdvDaBa23", "N"=XX, "RAM_MB"="3000", "seconds"="YY"}|
+
+
+
 ## Status
 
 Temps de chargement: 27min
