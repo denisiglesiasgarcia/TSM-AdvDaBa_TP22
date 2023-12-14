@@ -3,7 +3,7 @@
 TSM-AdvDaBa - Large database experiment with Neo4j
 
 ## Rendu du travail
-l
+
 **Informations selon les données moodle.**
 
 | Nom | Valeur |
