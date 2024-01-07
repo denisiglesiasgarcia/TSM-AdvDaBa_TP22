@@ -14,26 +14,10 @@ until $(nc -zv $NEO4J_HOST $NEO4J_PORT); do
     sleep 5
 done
 
-echo "Neo4j service is available, proceeding with data import check..."
+echo "Neo4j service is available, starting data import..."
 
-# Check if the marker file exists
-if [ ! -f /tmp/data_imported ]; then
-    echo "Marker file not found, starting data import..."
-    
-    # Run your Python script
-    python main.py
-
-    # Check if the script ran successfully
-    if [ $? -eq 0 ]; then
-        echo "Python script ran successfully, creating marker file..."
-        touch /tmp/data_imported
-    else
-        echo "Python script failed, not creating marker file."
-        exit 1
-    fi
-else
-    echo "Marker file found, data import is not required."
-fi
+# Run your Python script
+python main.py
 
 # Here you can put the command to keep the container alive, if needed.
 echo "Keeping the container alive..."

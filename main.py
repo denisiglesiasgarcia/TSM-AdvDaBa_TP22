@@ -187,10 +187,14 @@ def parse_ijson_object(cleaned_data, batch_size):
         """
         it = iter(iterable)
         while True:
-            chunk = list(islice(it, size))
-            if not chunk:
+            try:
+                chunk = list(islice(it, size))
+                if not chunk:
+                    break
+                yield chunk
+            except Exception as e:
+                logging.error(f"Error processing chunk: {e}")
                 break
-            yield chunk
 
     def process_articles_chunk(articles_chunk):
         article_id_article_title_list = []
